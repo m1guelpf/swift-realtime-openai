@@ -1,4 +1,3 @@
-
 import Foundation
 
 public enum ClientEvent: Sendable {
@@ -107,40 +106,40 @@ public enum ClientEvent: Sendable {
 	case cancelResponse(ResponseCancelEvent)
 }
 
-extension ClientEvent {
-    public static func updateSession(id: String? = nil, _ session: Session) -> Self {
+public extension ClientEvent {
+	static func updateSession(id: String? = nil, _ session: Session) -> Self {
 		.updateSession(SessionUpdateEvent(event_id: id, session: session))
 	}
 
-	public static func appendInputAudioBuffer(id: String? = nil, encoding audio: Data) -> Self {
+	static func appendInputAudioBuffer(id: String? = nil, encoding audio: Data) -> Self {
 		.appendInputAudioBuffer(InputAudioBufferAppendEvent(event_id: id, audio: audio.base64EncodedString()))
 	}
 
-	public static func commitInputAudioBuffer(id: String? = nil) -> Self {
+	static func commitInputAudioBuffer(id: String? = nil) -> Self {
 		.commitInputAudioBuffer(InputAudioBufferCommitEvent(event_id: id))
 	}
 
-	public static func clearInputAudioBuffer(id: String? = nil) -> Self {
+	static func clearInputAudioBuffer(id: String? = nil) -> Self {
 		.clearInputAudioBuffer(InputAudioBufferClearEvent(event_id: id))
 	}
 
-	public static func createConversationItem(id: String? = nil, previous previousID: String? = nil, _ item: Item) -> Self {
+	static func createConversationItem(id: String? = nil, previous previousID: String? = nil, _ item: Item) -> Self {
 		.createConversationItem(ConversationItemCreateEvent(event_id: id, previous_item_id: previousID, item: item))
 	}
 
-	public static func truncateConversationItem(id event_id: String? = nil, for id: String? = nil, at index: Int, at_audio audio_index: Int) -> Self {
+	static func truncateConversationItem(id event_id: String? = nil, for id: String? = nil, at index: Int, at_audio audio_index: Int) -> Self {
 		.truncateConversationItem(ConversationItemTruncateEvent(event_id: event_id, item_id: id, content_index: index, audio_end_ms: audio_index))
 	}
 
-	public static func deleteConversationItem(id event_id: String? = nil, for id: String? = nil, at index: Int, at_audio audio_index: Int) -> Self {
+	static func deleteConversationItem(id event_id: String? = nil, for id: String? = nil, at index: Int, at_audio audio_index: Int) -> Self {
 		.deleteConversationItem(ConversationItemDeleteEvent(event_id: event_id, item_id: id, content_index: index, audio_end_ms: audio_index))
 	}
 
-	public static func createResponse(id: String? = nil, _ response: Response.Config? = nil) -> Self {
+	static func createResponse(id: String? = nil, _ response: Response.Config? = nil) -> Self {
 		.createResponse(ResponseCreateEvent(event_id: id, response: response))
 	}
 
-	public static func cancelResponse(id: String? = nil) -> Self {
+	static func cancelResponse(id: String? = nil) -> Self {
 		.cancelResponse(ResponseCancelEvent(event_id: id))
 	}
 }

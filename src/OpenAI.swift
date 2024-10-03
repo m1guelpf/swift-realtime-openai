@@ -3,14 +3,13 @@ import Foundation
 public final class RealtimeAPI: NSObject, Sendable {
 	public let messages: AsyncThrowingStream<ServerEvent, Error>
 
-
-	private let task: URLSessionWebSocketTask
 	private let encoder = JSONEncoder()
 	private let decoder = JSONDecoder()
+	private let task: URLSessionWebSocketTask
 	private let stream: AsyncThrowingStream<ServerEvent, Error>.Continuation
 
-    public init(connectingTo request: URLRequest) {
-        (messages, stream) = AsyncThrowingStream.makeStream(of: ServerEvent.self)
+	public init(connectingTo request: URLRequest) {
+		(messages, stream) = AsyncThrowingStream.makeStream(of: ServerEvent.self)
 		task = URLSession.shared.webSocketTask(with: request)
 
 		super.init()
@@ -18,7 +17,7 @@ public final class RealtimeAPI: NSObject, Sendable {
 		task.delegate = self
 		receiveMessage()
 		task.resume()
-    }
+	}
 
 	public convenience init(auth_token: String, model: String = "gpt-4o-realtime-preview-2024-10-01") {
 		var request = URLRequest(url: URL(string: "wss://api.openai.com/v1/realtime")!.appending(queryItems: [
@@ -27,7 +26,7 @@ public final class RealtimeAPI: NSObject, Sendable {
 		request.addValue("realtime=v1", forHTTPHeaderField: "OpenAI-Beta")
 		request.addValue("Bearer \(auth_token)", forHTTPHeaderField: "Authorization")
 
-        self.init(connectingTo: request)
+		self.init(connectingTo: request)
 	}
 
 	deinit {

@@ -1,5 +1,3 @@
-
-
 public enum ServerEvent: Sendable {
 	public struct ErrorEvent: Codable, Sendable {
 		/// The unique ID of the server event.

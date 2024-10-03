@@ -1,5 +1,5 @@
-public struct Response: Codable, Sendable {
-	public struct Config: Codable, Sendable {
+public struct Response: Codable, Equatable, Sendable {
+	public struct Config: Codable, Equatable, Sendable {
 		/// The modalities for the response.
 		public let modalities: [Session.Modality]
 		/// Instructions for the model.
@@ -18,7 +18,7 @@ public struct Response: Codable, Sendable {
 		public let max_output_tokens: Int?
 	}
 
-	public enum Status: String, Codable, Sendable {
+	public enum Status: String, Codable, Equatable, Sendable {
 		case failed
 		case completed
 		case cancelled
@@ -26,7 +26,7 @@ public struct Response: Codable, Sendable {
 		case in_progress
 	}
 
-	public struct Usage: Codable, Sendable {
+	public struct Usage: Codable, Equatable, Sendable {
 		public let total_tokens: Int
 		public let input_tokens: Int
 		public let output_tokens: Int

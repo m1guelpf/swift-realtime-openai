@@ -1,4 +1,4 @@
-public struct Session: Codable, Sendable {
+public struct Session: Codable, Equatable, Sendable {
 	public enum Modality: String, Codable, Sendable {
 		case text
 		case audio
@@ -19,12 +19,12 @@ public struct Session: Codable, Sendable {
 		case g711_alaw
 	}
 
-	public struct InputAudioTranscription: Codable, Sendable {
+	public struct InputAudioTranscription: Codable, Equatable, Sendable {
 		public var enabled: Bool
 		public var model: String
 	}
 
-	public struct TurnDetection: Codable, Sendable {
+	public struct TurnDetection: Codable, Equatable, Sendable {
 		public enum TurnDetectionType: String, Codable, Sendable {
 			case server_vad
 			case none
@@ -40,7 +40,7 @@ public struct Session: Codable, Sendable {
 		public var silence_duration_ms: Int
 	}
 
-	public struct Tool: Codable, Sendable {
+	public struct Tool: Codable, Equatable, Sendable {
 		public struct FunctionParameters: Codable, Equatable, Sendable {
 			public var type: JSONType
 			public var properties: [String: Property]?
@@ -184,7 +184,7 @@ public struct Session: Codable, Sendable {
 		public var parameters: FunctionParameters
 	}
 
-	public enum ToolChoice: Codable, Sendable {
+	public enum ToolChoice: Codable, Equatable, Sendable {
 		case auto
 		case none
 		case required
@@ -194,7 +194,7 @@ public struct Session: Codable, Sendable {
 			self = .function(name)
 		}
 
-		private enum FunctionCall: Codable, Equatable {
+		private enum FunctionCall: Codable {
 			case type
 			case function
 

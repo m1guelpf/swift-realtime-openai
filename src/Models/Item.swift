@@ -1,6 +1,6 @@
 import Foundation
 
-public enum Item: Sendable {
+public enum Item: Equatable, Sendable {
 	public enum ItemStatus: String, Codable, Sendable {
 		case completed
 		case in_progress
@@ -69,9 +69,9 @@ public enum Item: Sendable {
 		}
 	}
 
-	public struct Message: Codable, Sendable {
-		public enum Content: Codable, Sendable {
-			public struct Audio: Codable, Sendable {
+	public struct Message: Codable, Equatable, Sendable {
+		public enum Content: Codable, Equatable, Sendable {
+			public struct Audio: Codable, Equatable, Sendable {
 				/// Base64-encoded audio bytes.
 				public var audio: String
 				/// The transcript of the audio.
@@ -159,7 +159,7 @@ public enum Item: Sendable {
 		}
 	}
 
-	public struct FunctionCall: Codable, Sendable {
+	public struct FunctionCall: Codable, Equatable, Sendable {
 		/// The unique ID of the item.
 		public var id: String
 		/// The type of the item
@@ -176,7 +176,7 @@ public enum Item: Sendable {
 		public var arguments: String
 	}
 
-	public struct FunctionCallOutput: Codable, Sendable {
+	public struct FunctionCallOutput: Codable, Equatable, Sendable {
 		/// The unique ID of the item.
 		public var id: String
 		/// The type of the item

@@ -1,7 +1,7 @@
 import Foundation
 
-public enum ClientEvent: Sendable {
-	public struct SessionUpdateEvent: Encodable, Sendable {
+public enum ClientEvent: Equatable, Sendable {
+	public struct SessionUpdateEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
 		public var event_id: String?
 		/// Session configuration to update.
@@ -10,7 +10,7 @@ public enum ClientEvent: Sendable {
 		private let type = "session.update"
 	}
 
-	public struct InputAudioBufferAppendEvent: Encodable, Sendable {
+	public struct InputAudioBufferAppendEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
 		public var event_id: String?
 		/// Base64-encoded audio bytes.
@@ -19,21 +19,21 @@ public enum ClientEvent: Sendable {
 		private let type = "input_audio_buffer.append"
 	}
 
-	public struct InputAudioBufferCommitEvent: Encodable, Sendable {
+	public struct InputAudioBufferCommitEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
 		public var event_id: String?
 
 		private let type = "input_audio_buffer.commit"
 	}
 
-	public struct InputAudioBufferClearEvent: Encodable, Sendable {
+	public struct InputAudioBufferClearEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
 		public var event_id: String?
 
 		private let type = "input_audio_buffer.clear"
 	}
 
-	public struct ConversationItemCreateEvent: Encodable, Sendable {
+	public struct ConversationItemCreateEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
 		public var event_id: String?
 		/// The ID of the preceding item after which the new item will be inserted.
@@ -44,7 +44,7 @@ public enum ClientEvent: Sendable {
 		private let type = "conversation.item.create"
 	}
 
-	public struct ConversationItemTruncateEvent: Encodable, Sendable {
+	public struct ConversationItemTruncateEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
 		public var event_id: String?
 		/// The ID of the assistant message item to truncate.
@@ -57,7 +57,7 @@ public enum ClientEvent: Sendable {
 		private let type = "conversation.item.truncate"
 	}
 
-	public struct ConversationItemDeleteEvent: Encodable, Sendable {
+	public struct ConversationItemDeleteEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
 		public var event_id: String?
 		/// The ID of the assistant message item to truncate.
@@ -70,7 +70,7 @@ public enum ClientEvent: Sendable {
 		private let type = "conversation.item.delete"
 	}
 
-	public struct ResponseCreateEvent: Encodable, Sendable {
+	public struct ResponseCreateEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
 		public var event_id: String?
 		/// Configuration for the response.
@@ -79,7 +79,7 @@ public enum ClientEvent: Sendable {
 		private let type = "response.create"
 	}
 
-	public struct ResponseCancelEvent: Encodable, Sendable {
+	public struct ResponseCancelEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
 		public var event_id: String?
 

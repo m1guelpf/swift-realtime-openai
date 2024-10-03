@@ -6,9 +6,9 @@ let package = Package(
     name: "OpenAI",
     platforms: [
         .iOS(.v16),
-        .tvOS(.v13),
+        .tvOS(.v16),
         .macOS(.v13),
-        .watchOS(.v6),
+        .watchOS(.v9),
         .visionOS(.v1)
     ],
     products: [

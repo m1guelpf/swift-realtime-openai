@@ -13,14 +13,14 @@ public enum Item: Equatable, Sendable {
 		case assistant
 	}
 
-	public enum ContentPart: Codable, Sendable {
-		public struct Audio: Codable, Sendable {
-			/// Base64-encoded audio bytes.
-			public var audio: String
-			/// The transcript of the audio.
-			public var transcript: String?
-		}
+	public struct Audio: Codable, Equatable, Sendable {
+		/// Base64-encoded audio bytes.
+		public var audio: String?
+		/// The transcript of the audio.
+		public var transcript: String?
+	}
 
+	public enum ContentPart: Codable, Equatable, Sendable {
 		case text(String)
 		case audio(Audio)
 
@@ -71,13 +71,6 @@ public enum Item: Equatable, Sendable {
 
 	public struct Message: Codable, Equatable, Sendable {
 		public enum Content: Codable, Equatable, Sendable {
-			public struct Audio: Codable, Equatable, Sendable {
-				/// Base64-encoded audio bytes.
-				public var audio: String
-				/// The transcript of the audio.
-				public var transcript: String?
-			}
-
 			case text(String)
 			case audio(Audio)
 			case input_text(String)
@@ -248,6 +241,17 @@ extension Item: Codable {
 				try functionCall.encode(to: encoder)
 			case let .functionCallOutput(functionCallOutput):
 				try functionCallOutput.encode(to: encoder)
+		}
+	}
+}
+
+public extension Item.Message.Content {
+	init(from part: Item.ContentPart) {
+		switch part {
+			case let .audio(audio):
+				self = .audio(audio)
+			case let .text(text):
+				self = .text(text)
 		}
 	}
 }

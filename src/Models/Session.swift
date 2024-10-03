@@ -250,7 +250,7 @@ public struct Session: Codable, Equatable, Sendable {
 	}
 
 	/// The unique ID of the session.
-	public var id: String
+	public var id: String?
 	/// The default model used for this session.
 	public var model: String
 	/// The set of modalities the model can respond with.

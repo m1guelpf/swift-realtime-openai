@@ -51,7 +51,7 @@ public struct ContentView: View {
 
     func sendMessage(message: String) {
         Task {
-            try! await api.send(event: .createConversationItem(Item(message: .init(from: .user, content: [.text(message)]))))
+            try! await api.send(event: .createConversationItem(Item(message: .init(id: "msg-1", from: .user, content: [.text(message)]))))
             try! await api.send(event: .createResponse())
         }
     }

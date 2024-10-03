@@ -141,7 +141,7 @@ public enum Item: Sendable {
 		}
 
 		/// The unique ID of the item.
-		public var id: String?
+		public var id: String
 		/// The type of the item
 		private var type: String = "message"
 		/// The status of the item
@@ -151,7 +151,7 @@ public enum Item: Sendable {
 		/// The content of the message.
 		public var content: [Content]
 
-		public init(id: String? = nil, from role: ItemRole, content: [Content]) {
+		public init(id: String, from role: ItemRole, content: [Content]) {
 			self.id = id
 			self.role = role
 			status = .completed
@@ -194,6 +194,17 @@ public enum Item: Sendable {
 	case message(Message)
 	case functionCall(FunctionCall)
 	case functionCallOutput(FunctionCallOutput)
+
+	public var id: String {
+		switch self {
+			case let .message(message):
+				return message.id
+			case let .functionCall(functionCall):
+				return functionCall.id
+			case let .functionCallOutput(functionCallOutput):
+				return functionCallOutput.id
+		}
+	}
 
 	public init(message: Message) {
 		self = .message(message)

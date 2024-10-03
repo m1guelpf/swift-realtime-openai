@@ -20,8 +20,8 @@ public struct Session: Codable, Sendable {
 	}
 
 	public struct InputAudioTranscription: Codable, Sendable {
-		public let enabled: Bool
-		public let model: String
+		public var enabled: Bool
+		public var model: String
 	}
 
 	public struct TurnDetection: Codable, Sendable {
@@ -31,26 +31,26 @@ public struct Session: Codable, Sendable {
 		}
 
 		/// The type of turn detection.
-		public let type: TurnDetectionType
+		public var type: TurnDetectionType
 		/// Activation threshold for VAD (0.0 to 1.0).
-		public let threshold: Double
+		public var threshold: Double
 		/// Amount of audio to include before speech starts (in milliseconds).
-		public let prefix_padding_ms: Int
+		public var prefix_padding_ms: Int
 		/// Duration of silence to detect speech stop (in milliseconds).
-		public let silence_duration_ms: Int
+		public var silence_duration_ms: Int
 	}
 
 	public struct Tool: Codable, Sendable {
 		public struct FunctionParameters: Codable, Equatable, Sendable {
-			public let type: JSONType
-			public let properties: [String: Property]?
-			public let required: [String]?
-			public let pattern: String?
-			public let const: String?
-			public let `enum`: [String]?
-			public let multipleOf: Int?
-			public let minimum: Int?
-			public let maximum: Int?
+			public var type: JSONType
+			public var properties: [String: Property]?
+			public var required: [String]?
+			public var pattern: String?
+			public var const: String?
+			public var `enum`: [String]?
+			public var multipleOf: Int?
+			public var minimum: Int?
+			public var maximum: Int?
 
 			public init(
 				type: JSONType,
@@ -75,20 +75,20 @@ public struct Session: Codable, Sendable {
 			}
 
 			public struct Property: Codable, Equatable, Sendable {
-				public let type: JSONType
-				public let description: String?
-				public let format: String?
-				public let items: Items?
-				public let required: [String]?
-				public let pattern: String?
-				public let const: String?
-				public let `enum`: [String]?
-				public let multipleOf: Int?
-				public let minimum: Double?
-				public let maximum: Double?
-				public let minItems: Int?
-				public let maxItems: Int?
-				public let uniqueItems: Bool?
+				public var type: JSONType
+				public var description: String?
+				public var format: String?
+				public var items: Items?
+				public var required: [String]?
+				public var pattern: String?
+				public var const: String?
+				public var `enum`: [String]?
+				public var multipleOf: Int?
+				public var minimum: Double?
+				public var maximum: Double?
+				public var minItems: Int?
+				public var maxItems: Int?
+				public var uniqueItems: Bool?
 
 				public init(
 					type: JSONType,
@@ -123,17 +123,17 @@ public struct Session: Codable, Sendable {
 				}
 
 				public struct Items: Codable, Equatable, Sendable {
-					public let type: JSONType
-					public let properties: [String: Property]?
-					public let pattern: String?
-					public let const: String?
-					public let `enum`: [String]?
-					public let multipleOf: Int?
-					public let minimum: Double?
-					public let maximum: Double?
-					public let minItems: Int?
-					public let maxItems: Int?
-					public let uniqueItems: Bool?
+					public var type: JSONType
+					public var properties: [String: Property]?
+					public var pattern: String?
+					public var const: String?
+					public var `enum`: [String]?
+					public var multipleOf: Int?
+					public var minimum: Double?
+					public var maximum: Double?
+					public var minItems: Int?
+					public var maxItems: Int?
+					public var uniqueItems: Bool?
 
 					public init(
 						type: JSONType,
@@ -175,13 +175,13 @@ public struct Session: Codable, Sendable {
 		}
 
 		/// The type of the tool.
-		public let type: String
+		public var type: String
 		/// The name of the function.
-		public let name: String
+		public var name: String
 		/// The description of the function.
-		public let description: String
+		public var description: String
 		/// Parameters of the function in JSON Schema.
-		public let parameters: FunctionParameters
+		public var parameters: FunctionParameters
 	}
 
 	public enum ToolChoice: Codable, Sendable {
@@ -250,29 +250,29 @@ public struct Session: Codable, Sendable {
 	}
 
 	/// The unique ID of the session.
-	public let id: String
+	public var id: String
 	/// The default model used for this session.
-	public let model: String
+	public var model: String
 	/// The set of modalities the model can respond with.
-	public let modalities: [Modality]
+	public var modalities: [Modality]
 	/// The default system instructions.
-	public let instructions: String
+	public var instructions: String
 	/// The voice the model uses to respond.
-	public let voice: Voice
+	public var voice: Voice
 	/// The format of input audio.
-	public let input_audio_format: AudioFormat
+	public var input_audio_format: AudioFormat
 	/// The format of output audio.
-	public let output_audio_format: AudioFormat
+	public var output_audio_format: AudioFormat
 	/// Configuration for input audio transcription.
-	public let input_audio_transcription: InputAudioTranscription?
+	public var input_audio_transcription: InputAudioTranscription?
 	/// Configuration for turn detection.
-	public let turn_detection: TurnDetection?
+	public var turn_detection: TurnDetection?
 	/// Tools (functions) available to the model.
-	public let tools: [Tool]
+	public var tools: [Tool]
 	/// How the model chooses tools.
-	public let tool_choice: ToolChoice
+	public var tool_choice: ToolChoice
 	/// Sampling temperature.
-	public let temperature: Double
+	public var temperature: Double
 	/// Maximum number of output tokens.
-	public let max_output_tokens: Int?
+	public var max_output_tokens: Int?
 }

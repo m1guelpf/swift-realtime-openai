@@ -292,7 +292,7 @@ public enum ServerEvent: Sendable {
 			/// The remaining value before the limit is reached.
 			public let remaining: Int
 			/// Seconds until the rate limit resets.
-			public let reset_seconds: Int
+			public let reset_seconds: Double
 		}
 
 		/// The unique ID of the server event.

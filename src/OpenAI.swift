@@ -1,7 +1,7 @@
 import Foundation
 
 public final class RealtimeAPI: NSObject, Sendable {
-	public let messages: AsyncThrowingStream<ServerEvent, Error>
+	public let events: AsyncThrowingStream<ServerEvent, Error>
 
 	private let encoder = JSONEncoder()
 	private let decoder = JSONDecoder()
@@ -9,7 +9,7 @@ public final class RealtimeAPI: NSObject, Sendable {
 	private let stream: AsyncThrowingStream<ServerEvent, Error>.Continuation
 
 	public init(connectingTo request: URLRequest) {
-		(messages, stream) = AsyncThrowingStream.makeStream(of: ServerEvent.self)
+		(events, stream) = AsyncThrowingStream.makeStream(of: ServerEvent.self)
 		task = URLSession.shared.webSocketTask(with: request)
 
 		super.init()

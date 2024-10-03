@@ -43,7 +43,7 @@ public struct ContentView: View {
 			Button("Send Message") { self.sendMessage("Hi!") }
 		}
         .task {
-			for try! await message in api.messages {
+			for try! await message in api.events {
                 print(message)
             }
 		}
@@ -68,10 +68,10 @@ public struct ContentView: View {
 
 ### RealtimeAPI
 
-To connect to the API, create a new instance of `RealtimeAPI` providing a valid OpenAI API Key. The websocket connection will be automatically established. You can listen for new events through the `messages` property, like so:
+To connect to the API, create a new instance of `RealtimeAPI` providing a valid OpenAI API Key. The websocket connection will be automatically established. You can listen for new events through the `events` property, like so:
 
 ```swift
-for try await message in api.messages {
+for try await message in api.events {
     switch message {
         case let .sessionCreated(event):
             print(event.session.id)

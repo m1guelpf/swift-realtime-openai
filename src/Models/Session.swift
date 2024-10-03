@@ -20,8 +20,8 @@ public struct Session: Codable, Sendable {
 	}
 
 	public struct InputAudioTranscription: Codable, Sendable {
-		let enabled: Bool
-		let model: String
+		public let enabled: Bool
+		public let model: String
 	}
 
 	public struct TurnDetection: Codable, Sendable {
@@ -31,13 +31,13 @@ public struct Session: Codable, Sendable {
 		}
 
 		/// The type of turn detection.
-		let type: TurnDetectionType
+		public let type: TurnDetectionType
 		/// Activation threshold for VAD (0.0 to 1.0).
-		let threshold: Double
+		public let threshold: Double
 		/// Amount of audio to include before speech starts (in milliseconds).
-		let prefix_padding_ms: Int
+		public let prefix_padding_ms: Int
 		/// Duration of silence to detect speech stop (in milliseconds).
-		let silence_duration_ms: Int
+		public let silence_duration_ms: Int
 	}
 
 	public struct Tool: Codable, Sendable {
@@ -175,13 +175,13 @@ public struct Session: Codable, Sendable {
 		}
 
 		/// The type of the tool.
-		let type: String
+		public let type: String
 		/// The name of the function.
-		let name: String
+		public let name: String
 		/// The description of the function.
-		let description: String
+		public let description: String
 		/// Parameters of the function in JSON Schema.
-		let parameters: FunctionParameters
+		public let parameters: FunctionParameters
 	}
 
 	public enum ToolChoice: Codable, Sendable {
@@ -250,29 +250,29 @@ public struct Session: Codable, Sendable {
 	}
 
 	/// The unique ID of the session.
-	let id: String
+	public let id: String
 	/// The default model used for this session.
-	let model: String
+	public let model: String
 	/// The set of modalities the model can respond with.
-	let modalities: [Modality]
+	public let modalities: [Modality]
 	/// The default system instructions.
-	let instructions: String
+	public let instructions: String
 	/// The voice the model uses to respond.
-	let voice: Voice
+	public let voice: Voice
 	/// The format of input audio.
-	let input_audio_format: AudioFormat
+	public let input_audio_format: AudioFormat
 	/// The format of output audio.
-	let output_audio_format: AudioFormat
+	public let output_audio_format: AudioFormat
 	/// Configuration for input audio transcription.
-	let input_audio_transcription: InputAudioTranscription?
+	public let input_audio_transcription: InputAudioTranscription?
 	/// Configuration for turn detection.
-	let turn_detection: TurnDetection?
+	public let turn_detection: TurnDetection?
 	/// Tools (functions) available to the model.
-	let tools: [Tool]
+	public let tools: [Tool]
 	/// How the model chooses tools.
-	let tool_choice: ToolChoice
+	public let tool_choice: ToolChoice
 	/// Sampling temperature.
-	let temperature: Double
+	public let temperature: Double
 	/// Maximum number of output tokens.
-	let max_output_tokens: Int?
+	public let max_output_tokens: Int?
 }

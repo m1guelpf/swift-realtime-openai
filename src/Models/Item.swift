@@ -16,9 +16,9 @@ public enum Item: Sendable {
 	public enum ContentPart: Codable, Sendable {
 		public struct Audio: Codable, Sendable {
 			/// Base64-encoded audio bytes.
-			var audio: String
+			public var audio: String
 			/// The transcript of the audio.
-			var transcript: String?
+			public var transcript: String?
 		}
 
 		case text(String)
@@ -73,9 +73,9 @@ public enum Item: Sendable {
 		public enum Content: Codable, Sendable {
 			public struct Audio: Codable, Sendable {
 				/// Base64-encoded audio bytes.
-				var audio: String
+				public var audio: String
 				/// The transcript of the audio.
-				var transcript: String?
+				public var transcript: String?
 			}
 
 			case text(String)
@@ -141,15 +141,15 @@ public enum Item: Sendable {
 		}
 
 		/// The unique ID of the item.
-		var id: String?
+		public var id: String?
 		/// The type of the item
 		private var type: String = "message"
 		/// The status of the item
-		var status: ItemStatus
+		public var status: ItemStatus
 		/// The role associated with the item
-		var role: ItemRole
+		public var role: ItemRole
 		/// The content of the message.
-		var content: [Content]
+		public var content: [Content]
 
 		public init(id: String? = nil, from role: ItemRole, content: [Content]) {
 			self.id = id
@@ -161,34 +161,34 @@ public enum Item: Sendable {
 
 	public struct FunctionCall: Codable, Sendable {
 		/// The unique ID of the item.
-		var id: String
+		public var id: String
 		/// The type of the item
 		private var type: String = "function_call"
 		/// The status of the item
-		var status: ItemStatus
+		public var status: ItemStatus
 		/// The role associated with the item
-		var role: ItemRole
+		public var role: ItemRole
 		/// The ID of the function call
-		var call_id: String
+		public var call_id: String
 		/// The name of the function being called
-		var name: String
+		public var name: String
 		/// The arguments of the function call
-		var arguments: String
+		public var arguments: String
 	}
 
 	public struct FunctionCallOutput: Codable, Sendable {
 		/// The unique ID of the item.
-		var id: String
+		public var id: String
 		/// The type of the item
 		private var type: String = "function_call_output"
 		/// The status of the item
-		var status: ItemStatus
+		public var status: ItemStatus
 		/// The role associated with the item
-		var role: ItemRole
+		public var role: ItemRole
 		/// The ID of the function call
-		var call_id: String
+		public var call_id: String
 		/// The output of the function call
-		var output: String
+		public var output: String
 	}
 
 	case message(Message)

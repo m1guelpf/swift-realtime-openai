@@ -1,304 +1,304 @@
 public enum ServerEvent: Sendable {
 	public struct ErrorEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// Details of the error.
-		let error: ServerError
+		public let error: ServerError
 	}
 
 	public struct SessionEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The session resource.
-		let session: Session
+		public let session: Session
 	}
 
 	public struct ConversationCreatedEvent: Codable, Sendable {
 		public struct Conversation: Codable, Sendable {
 			/// The unique ID of the conversation.
-			let id: String
+			public let id: String
 		}
 
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The conversation resource.
-		let conversation: Conversation
+		public let conversation: Conversation
 	}
 
 	public struct InputAudioBufferCommittedEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The ID of the preceding item after which the new item will be inserted.
-		let previous_item_id: String?
+		public let previous_item_id: String?
 		/// The ID of the user message item that will be created.
-		let item_id: String
+		public let item_id: String
 	}
 
 	public struct InputAudioBufferClearedEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 	}
 
 	public struct InputAudioBufferSpeechStartedEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// Milliseconds since the session started when speech was detected.
-		let audio_start_ms: Int
+		public let audio_start_ms: Int
 		/// The ID of the user message item that will be created when speech stops.
-		let item_id: String
+		public let item_id: String
 	}
 
 	public struct InputAudioBufferSpeechStoppedEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// Milliseconds since the session started when speech stopped.
-		let audio_end_ms: Int
+		public let audio_end_ms: Int
 		/// The ID of the user message item that will be created.
-		let item_id: String
+		public let item_id: String
 	}
 
 	public struct ConversationItemCreatedEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The ID of the preceding item.
-		let previous_item_id: String?
+		public let previous_item_id: String?
 		/// The item that was created.
-		let item: Item
+		public let item: Item
 	}
 
 	public struct ConversationItemInputAudioTranscriptionCompletedEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The ID of the user message item.
-		let item_id: String
+		public let item_id: String
 		/// The index of the content part containing the audio.
-		let content_index: Int
+		public let content_index: Int
 		/// The transcribed text.
-		let transcription: String
+		public let transcription: String
 	}
 
 	public struct ConversationItemInputAudioTranscriptionFailedEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The ID of the user message item.
-		let item_id: String
+		public let item_id: String
 		/// The index of the content part containing the audio.
-		let content_index: Int
+		public let content_index: Int
 		/// Details of the transcription error.
-		let error: ServerError
+		public let error: ServerError
 	}
 
 	public struct ConversationItemTruncatedEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The ID of the assistant message item that was truncated.
-		let item_id: String
+		public let item_id: String
 		/// The index of the content part that was truncated.
-		let content_index: Int
+		public let content_index: Int
 		/// The duration up to which the audio was truncated, in milliseconds.
-		let audio_end_ms: Int
+		public let audio_end_ms: Int
 	}
 
 	public struct ConversationItemDeletedEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The ID of the item that was deleted.
-		let item_id: String
+		public let item_id: String
 	}
 
 	public struct ResponseEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The response resource.
-		let response: Response
+		public let response: Response
 	}
 
 	public struct ResponseOutputItemAddedEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The ID of the response to which the item belongs.
-		let response_id: String
+		public let response_id: String
 		/// The index of the output item in the response.
-		let output_index: Int
+		public let output_index: Int
 		/// The item that was added.
-		let item: Item
+		public let item: Item
 	}
 
 	public struct ResponseOutputItemDoneEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The ID of the response to which the item belongs.
-		let response_id: String
+		public let response_id: String
 		/// The index of the output item in the response.
-		let output_index: Int
+		public let output_index: Int
 		/// The completed item.
-		let item: Item
+		public let item: Item
 	}
 
 	public struct ResponseContentPartAddedEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The ID of the response.
-		let response_id: String
+		public let response_id: String
 		/// The ID of the item to which the content part was added.
-		let item_id: String
+		public let item_id: String
 		/// The index of the output item in the response.
-		let output_index: Int
+		public let output_index: Int
 		/// The index of the content part in the item's content array.
-		let content_index: Int
+		public let content_index: Int
 		/// The content part that was added.
-		let part: Item.ContentPart
+		public let part: Item.ContentPart
 	}
 
 	public struct ResponseContentPartDoneEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The ID of the response.
-		let response_id: String
+		public let response_id: String
 		/// The ID of the item.
-		let item_id: String
+		public let item_id: String
 		/// The index of the output item in the response.
-		let output_index: Int
+		public let output_index: Int
 		/// The index of the content part in the item's content array.
-		let content_index: Int
+		public let content_index: Int
 		/// The content part that is done.
-		let part: Item.ContentPart
+		public let part: Item.ContentPart
 	}
 
 	public struct ResponseTextDeltaEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The ID of the response.
-		let response_id: String
+		public let response_id: String
 		/// The ID of the item.
-		let item_id: String
+		public let item_id: String
 		/// The index of the output item in the response.
-		let output_index: Int
+		public let output_index: Int
 		/// The index of the content part in the item's content array.
-		let content_index: Int
+		public let content_index: Int
 		/// The text delta.
-		let delta: String
+		public let delta: String
 	}
 
 	public struct ResponseTextDoneEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The ID of the response.
-		let response_id: String
+		public let response_id: String
 		/// The ID of the item.
-		let item_id: String
+		public let item_id: String
 		/// The index of the output item in the response.
-		let output_index: Int
+		public let output_index: Int
 		/// The index of the content part in the item's content array.
-		let content_index: Int
+		public let content_index: Int
 		/// The final text content.
-		let text: String
+		public let text: String
 	}
 
 	public struct ResponseAudioTranscriptDeltaEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The ID of the response.
-		let response_id: String
+		public let response_id: String
 		/// The ID of the item.
-		let item_id: String
+		public let item_id: String
 		/// The index of the output item in the response.
-		let output_index: Int
+		public let output_index: Int
 		/// The index of the content part in the item's content array.
-		let content_index: Int
+		public let content_index: Int
 		/// The transcript delta.
-		let delta: String
+		public let delta: String
 	}
 
 	public struct ResponseAudioTranscriptDoneEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The ID of the response.
-		let response_id: String
+		public let response_id: String
 		/// The ID of the item.
-		let item_id: String
+		public let item_id: String
 		/// The index of the output item in the response.
-		let output_index: Int
+		public let output_index: Int
 		/// The index of the content part in the item's content array.
-		let content_index: Int
+		public let content_index: Int
 		/// The final transcript of the audio.
-		let transcript: String
+		public let transcript: String
 	}
 
 	public struct ResponseAudioDeltaEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The ID of the response.
-		let response_id: String
+		public let response_id: String
 		/// The ID of the item.
-		let item_id: String
+		public let item_id: String
 		/// The index of the output item in the response.
-		let output_index: Int
+		public let output_index: Int
 		/// The index of the content part in the item's content array.
-		let content_index: Int
+		public let content_index: Int
 		/// Base64-encoded audio data delta.
-		let delta: String
+		public let delta: String
 	}
 
 	public struct ResponseAudioDoneEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The ID of the response.
-		let response_id: String
+		public let response_id: String
 		/// The ID of the item.
-		let item_id: String
+		public let item_id: String
 		/// The index of the output item in the response.
-		let output_index: Int
+		public let output_index: Int
 		/// The index of the content part in the item's content array.
-		let content_index: Int
+		public let content_index: Int
 	}
 
 	public struct ResponseFunctionCallArgumentsDeltaEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The ID of the response.
-		let response_id: String
+		public let response_id: String
 		/// The ID of the function call item.
-		let item_id: String
+		public let item_id: String
 		/// The index of the output item in the response.
-		let output_index: Int
+		public let output_index: Int
 		/// The ID of the function call.
-		let call_id: String
+		public let call_id: String
 		/// The arguments delta as a JSON string.
-		let delta: String
+		public let delta: String
 	}
 
 	public struct ResponseFunctionCallArgumentsDoneEvent: Codable, Sendable {
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// The ID of the response.
-		let response_id: String
+		public let response_id: String
 		/// The ID of the function call item.
-		let item_id: String
+		public let item_id: String
 		/// The index of the output item in the response.
-		let output_index: Int
+		public let output_index: Int
 		/// The ID of the function call.
-		let call_id: String
+		public let call_id: String
 		/// The final arguments as a JSON string.
-		let arguments: String
+		public let arguments: String
 	}
 
 	public struct RateLimitsUpdatedEvent: Codable, Sendable {
 		public struct RateLimit: Codable, Sendable {
 			/// The name of the rate limit
-			let name: String
+			public let name: String
 			/// The maximum allowed value for the rate limit.
-			let limit: Int
+			public let limit: Int
 			/// The remaining value before the limit is reached.
-			let remaining: Int
+			public let remaining: Int
 			/// Seconds until the rate limit resets.
-			let reset_seconds: Int
+			public let reset_seconds: Int
 		}
 
 		/// The unique ID of the server event.
-		let event_id: String
+		public let event_id: String
 		/// List of rate limit information.
-		let rate_limits: [RateLimit]
+		public let rate_limits: [RateLimit]
 	}
 
 	/// Returned when an error occurs.

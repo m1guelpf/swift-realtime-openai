@@ -53,8 +53,8 @@ public final class Conversation: Sendable {
 		}
 	}
 
-	public convenience init(auth_token token: String, model: String = "gpt-4o-realtime-preview-2024-10-01") {
-		self.init(client: RealtimeAPI(auth_token: token, model: model))
+	public convenience init(authToken token: String, model: String = "gpt-4o-realtime-preview-2024-10-01") {
+		self.init(client: RealtimeAPI(authToken: token, model: model))
 	}
 
 	public convenience init(connectingTo request: URLRequest) {
@@ -119,49 +119,49 @@ private extension Conversation {
 			case let .conversationItemCreated(event):
 				entries.append(event.item)
 			case let .conversationItemDeleted(event):
-				entries.removeAll { $0.id == event.item_id }
+				entries.removeAll { $0.id == event.itemId }
 			case let .responseContentPartAdded(event):
-				updateEvent(id: event.item_id) { message in
-					message.content.insert(.init(from: event.part), at: event.content_index)
+				updateEvent(id: event.itemId) { message in
+					message.content.insert(.init(from: event.part), at: event.contentIndex)
 				}
 			case let .responseContentPartDone(event):
-				updateEvent(id: event.item_id) { message in
-					message.content[event.content_index] = .init(from: event.part)
+				updateEvent(id: event.itemId) { message in
+					message.content[event.contentIndex] = .init(from: event.part)
 				}
 			case let .responseTextDelta(event):
-				updateEvent(id: event.item_id) { message in
-					guard case let .text(text) = message.content[event.content_index] else { return }
+				updateEvent(id: event.itemId) { message in
+					guard case let .text(text) = message.content[event.contentIndex] else { return }
 
-					message.content[event.content_index] = .text(text + event.delta)
+					message.content[event.contentIndex] = .text(text + event.delta)
 				}
 			case let .responseTextDone(event):
-				updateEvent(id: event.item_id) { message in
-					message.content[event.content_index] = .text(event.text)
+				updateEvent(id: event.itemId) { message in
+					message.content[event.contentIndex] = .text(event.text)
 				}
 			case let .responseAudioTranscriptDelta(event):
-				updateEvent(id: event.item_id) { message in
-					guard case let .audio(audio) = message.content[event.content_index] else { return }
+				updateEvent(id: event.itemId) { message in
+					guard case let .audio(audio) = message.content[event.contentIndex] else { return }
 
-					message.content[event.content_index] = .audio(.init(audio: audio.audio, transcript: (audio.transcript ?? "") + event.delta))
+					message.content[event.contentIndex] = .audio(.init(audio: audio.audio, transcript: (audio.transcript ?? "") + event.delta))
 				}
 			case let .responseAudioTranscriptDone(event):
-				updateEvent(id: event.item_id) { message in
-					guard case let .audio(audio) = message.content[event.content_index] else { return }
+				updateEvent(id: event.itemId) { message in
+					guard case let .audio(audio) = message.content[event.contentIndex] else { return }
 
-					message.content[event.content_index] = .audio(.init(audio: audio.audio, transcript: event.transcript))
+					message.content[event.contentIndex] = .audio(.init(audio: audio.audio, transcript: event.transcript))
 				}
 			case let .responseAudioDelta(event):
-				updateEvent(id: event.item_id) { message in
-					guard case let .audio(audio) = message.content[event.content_index] else { return }
+				updateEvent(id: event.itemId) { message in
+					guard case let .audio(audio) = message.content[event.contentIndex] else { return }
 
-					message.content[event.content_index] = .audio(.init(audio: audio.audio + event.delta, transcript: audio.transcript))
+					message.content[event.contentIndex] = .audio(.init(audio: audio.audio + event.delta, transcript: audio.transcript))
 				}
 			case let .responseFunctionCallArgumentsDelta(event):
-				updateEvent(id: event.item_id) { functionCall in
+				updateEvent(id: event.itemId) { functionCall in
 					functionCall.arguments.append(event.delta)
 				}
 			case let .responseFunctionCallArgumentsDone(event):
-				updateEvent(id: event.item_id) { functionCall in
+				updateEvent(id: event.itemId) { functionCall in
 					functionCall.arguments = event.arguments
 				}
 			default:

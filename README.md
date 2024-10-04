@@ -3,9 +3,9 @@
 [![Swift Version](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fm1guelpf%2Fswift-realtime-openai%2Fbadge%3Ftype%3Dswift-versions&color=brightgreen)](http://swift.org)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/m1guelpf/swift-realtime-openai/main/LICENSE)
 
-This library provides a transparent interface for interacting with OpenAI's new Realtime API.
+This library provides a simple interface for implementing multi-modal conversations using OpenAI's new Realtime API.
 
-It will soon also provide an abstraction over itself that manages the conversation for you, and another layer that automatically handles voice conversations soon after.
+It also gives you a transparent layer over the API for advanced use cases, and will soon include another layer that automatically handles recording the user's microphone and playing back the assistant's response.
 
 ## Installation
 
@@ -31,46 +31,82 @@ dependencies: [
 
 ## Getting started 🚀
 
+You can build an iMessage-like UI with built-in AI chat in less than 60 lines of code (UI included!):
+
 ```swift
 import OpenAI
 import SwiftUI
 
-public struct ContentView: View {
-	@State private var api = RealtimeAPI(auth_token: OPENAI_KEY)
+struct ContentView: View {
+	@State private var newMessage: String = ""
+	@State private var conversation = Conversation(authToken: OPENAI_KEY)
 
-	public var body: some View {
-		VStack {
-			Button("Send Message") { self.sendMessage("Hi!") }
-		}
-        .task {
-			do {
-				for try await event in api.events {
-					print(event)
-				}
-			} catch {}
-		}
+	var messages: [Item.Message] {
+		conversation.entries.compactMap { switch $0 {
+			case let .message(message): return message
+			default: return nil
+		} }
 	}
 
-    func sendMessage(_ message: String) {
-        Task {
-            try! await api.send(event: .createConversationItem(Item(message: .init(id: "msg-1", from: .user, content: [.input_text(message)]))))
-            try! await api.send(event: .createResponse())
-        }
-    }
+	var body: some View {
+		VStack(spacing: 0) {
+			ScrollView {
+                VStack(spacing: 12) {
+                    ForEach(messages, id: \.id) { message in
+                        MessageBubble(message: message)
+                    }
+                }
+                .padding()
+			}
+
+			HStack(spacing: 12) {
+				HStack {
+					TextField("Chat", text: $newMessage, onCommit: { sendMessage() })
+						.frame(height: 40)
+						.submitLabel(.send)
+
+					if newMessage != "" {
+						Button(action: sendMessage) {
+							Image(systemName: "arrow.up.circle.fill")
+								.resizable()
+								.aspectRatio(contentMode: .fill)
+								.frame(width: 28, height: 28)
+								.foregroundStyle(.white, .blue)
+						}
+					}
+				}
+				.padding(.leading)
+				.padding(.trailing, 6)
+				.overlay(RoundedRectangle(cornerRadius: 20).stroke(.quaternary, lineWidth: 1))
+			}
+			.padding()
+		}
+		.navigationTitle("Chat")
+		.navigationBarTitleDisplayMode(.inline)
+	}
+
+	func sendMessage() {
+		guard newMessage != "" else { return }
+
+		Task {
+			try await conversation.send(from: .user, text: newMessage)
+			newMessage = ""
+		}
+	}
 }
 ```
 
 ## Features
 
 -   [x] A simple interface for directly interacting with the API
--   [ ] Wrap the API in an interface that manages the conversation for you
+-   [x] Wrap the API in an interface that manages the conversation for you
 -   [ ] Handle recording the mic and playing model responses for you
 
 ## Architecture
 
 ### RealtimeAPI
 
-To connect to the API, create a new instance of `RealtimeAPI` providing a valid OpenAI API Key. The websocket connection will be automatically established. You can listen for new events through the `events` property, like so:
+To interact with the API directly, create a new instance of `RealtimeAPI` providing a valid OpenAI API Key. The websocket connection will be automatically established. You can listen for new events through the `events` property, like so:
 
 ```swift
 for try await event in api.events {

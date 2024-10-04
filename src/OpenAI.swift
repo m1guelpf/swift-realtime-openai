@@ -1,6 +1,7 @@
 import Foundation
 
 public final class RealtimeAPI: NSObject, Sendable {
+	@MainActor public var onDisconnect: (@Sendable () -> Void)?
 	public let events: AsyncThrowingStream<ServerEvent, Error>
 
     private let encoder: JSONEncoder = {
@@ -40,6 +41,7 @@ public final class RealtimeAPI: NSObject, Sendable {
 	deinit {
 		task.cancel(with: .goingAway, reason: nil)
 		stream.finish()
+		onDisconnect?()
 	}
 
 	private func receiveMessage() {
@@ -75,6 +77,9 @@ public final class RealtimeAPI: NSObject, Sendable {
 extension RealtimeAPI: URLSessionWebSocketDelegate {
 	public func urlSession(_: URLSession, webSocketTask _: URLSessionWebSocketTask, didCloseWith _: URLSessionWebSocketTask.CloseCode, reason _: Data?) {
 		stream.finish()
+		Task { @MainActor in
+			onDisconnect?()
+		}
 	}
 }
 

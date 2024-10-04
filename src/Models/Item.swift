@@ -3,7 +3,7 @@ import Foundation
 public enum Item: Identifiable, Equatable, Sendable {
 	public enum ItemStatus: String, Codable, Sendable {
 		case completed
-		case inProgress = "in_progress"
+		case in_progress
 		case incomplete
 	}
 
@@ -13,140 +13,40 @@ public enum Item: Identifiable, Equatable, Sendable {
 		case assistant
 	}
 
-	public struct Audio: Codable, Equatable, Sendable {
+	public struct Audio: Equatable, Sendable {
 		/// Base64-encoded audio bytes.
-		public var audio: String?
+		public var audio: Data
 		/// The transcript of the audio.
 		public var transcript: String?
 
-		public init(audio: String? = nil, transcript: String? = nil) {
+		public init(audio: Data = Data(), transcript: String? = nil) {
 			self.audio = audio
 			self.transcript = transcript
 		}
 	}
 
-	public enum ContentPart: Codable, Equatable, Sendable {
+	public enum ContentPart: Equatable, Sendable {
 		case text(String)
 		case audio(Audio)
-
-		private enum CodingKeys: String, CodingKey {
-			case type
-			case text
-			case audio
-			case transcript
-		}
-
-		private struct Text: Codable {
-			let text: String
-
-			enum CodingKeys: CodingKey {
-				case text
-			}
-		}
-
-		public init(from decoder: any Decoder) throws {
-			let container = try decoder.container(keyedBy: CodingKeys.self)
-			let type = try container.decode(String.self, forKey: .type)
-
-			switch type {
-				case "text":
-					let container = try decoder.container(keyedBy: Text.CodingKeys.self)
-					self = try .text(container.decode(String.self, forKey: .text))
-				case "audio":
-					self = try .audio(Audio(from: decoder))
-				default:
-					throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown content type: \(type)")
-			}
-		}
-
-		public func encode(to encoder: Encoder) throws {
-			var container = encoder.container(keyedBy: CodingKeys.self)
-
-			switch self {
-				case let .text(text):
-					try container.encode(text, forKey: .text)
-					try container.encode("text", forKey: .type)
-				case let .audio(audio):
-					try container.encode("audio", forKey: .type)
-					try container.encode(audio.audio, forKey: .audio)
-					try container.encode(audio.transcript, forKey: .transcript)
-			}
-		}
 	}
 
 	public struct Message: Codable, Equatable, Sendable {
-		public enum Content: Codable, Equatable, Sendable {
+		public enum Content: Equatable, Sendable {
 			case text(String)
 			case audio(Audio)
-			case inputText(String)
-			case inputAudio(Audio)
+			case input_text(String)
+			case input_audio(Audio)
 
 			public var text: String? {
 				switch self {
 					case let .text(text):
 						return text
-					case let .inputText(text):
+					case let .input_text(text):
 						return text
-					case let .inputAudio(audio):
+					case let .input_audio(audio):
 						return audio.transcript
 					case let .audio(audio):
 						return audio.transcript
-				}
-			}
-
-			private enum CodingKeys: String, CodingKey {
-				case type
-				case text
-				case audio
-				case transcript
-			}
-
-			private struct Text: Codable {
-				let text: String
-
-				enum CodingKeys: CodingKey {
-					case text
-				}
-			}
-
-			public init(from decoder: any Decoder) throws {
-				let container = try decoder.container(keyedBy: CodingKeys.self)
-				let type = try container.decode(String.self, forKey: .type)
-
-				switch type {
-					case "text":
-						let container = try decoder.container(keyedBy: Text.CodingKeys.self)
-						self = try .text(container.decode(String.self, forKey: .text))
-					case "input_text":
-						let container = try decoder.container(keyedBy: Text.CodingKeys.self)
-						self = try .inputText(container.decode(String.self, forKey: .text))
-					case "audio":
-						self = try .audio(Audio(from: decoder))
-					case "input_audio":
-						self = try .inputAudio(Audio(from: decoder))
-					default:
-						throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown content type: \(type)")
-				}
-			}
-
-			public func encode(to encoder: Encoder) throws {
-				var container = encoder.container(keyedBy: CodingKeys.self)
-
-				switch self {
-					case let .text(text):
-						try container.encode(text, forKey: .text)
-						try container.encode("text", forKey: .type)
-					case let .inputText(text):
-						try container.encode(text, forKey: .text)
-						try container.encode("input_text", forKey: .type)
-					case let .audio(audio):
-						try container.encode("audio", forKey: .type)
-						try container.encode(audio.audio, forKey: .audio)
-						try container.encode(audio.transcript, forKey: .transcript)
-					case let .inputAudio(audio):
-						try container.encode(audio.audio, forKey: .audio)
-						try container.encode("input_audio", forKey: .type)
-						try container.encode(audio.transcript, forKey: .transcript)
 				}
 			}
 		}
@@ -180,7 +80,7 @@ public enum Item: Identifiable, Equatable, Sendable {
 		/// The role associated with the item
 		public var role: ItemRole
 		/// The ID of the function call
-		public var callId: String
+		public var call_id: String
 		/// The name of the function being called
 		public var name: String
 		/// The arguments of the function call
@@ -197,7 +97,7 @@ public enum Item: Identifiable, Equatable, Sendable {
 		/// The role associated with the item
 		public var role: ItemRole
 		/// The ID of the function call
-		public var callId: String
+		public var call_id: String
 		/// The output of the function call
 		public var output: String
 	}
@@ -229,6 +129,21 @@ public enum Item: Identifiable, Equatable, Sendable {
 		self = .functionCallOutput(functionCallOutput)
 	}
 }
+
+// MARK: Helpers
+
+public extension Item.Message.Content {
+	init(from part: Item.ContentPart) {
+		switch part {
+			case let .audio(audio):
+				self = .audio(audio)
+			case let .text(text):
+				self = .text(text)
+		}
+	}
+}
+
+// MARK: Codable implementations
 
 extension Item: Codable {
 	private enum CodingKeys: String, CodingKey {
@@ -263,13 +178,114 @@ extension Item: Codable {
 	}
 }
 
-public extension Item.Message.Content {
-	init(from part: Item.ContentPart) {
-		switch part {
-			case let .audio(audio):
-				self = .audio(audio)
+extension Item.Audio: Decodable {
+	private enum CodingKeys: String, CodingKey {
+		case audio
+		case transcript
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		transcript = try container.decodeIfPresent(String.self, forKey: .transcript)
+		let encodedAudio = try container.decodeIfPresent(String.self, forKey: .audio)
+
+		if let encodedAudio {
+			guard let decodedAudio = Data(base64Encoded: encodedAudio) else {
+				throw DecodingError.dataCorruptedError(forKey: .audio, in: container, debugDescription: "Invalid base64-encoded audio data.")
+			}
+			audio = decodedAudio
+		} else {
+			audio = Data()
+		}
+	}
+}
+
+extension Item.ContentPart: Decodable {
+	private enum CodingKeys: String, CodingKey {
+		case type
+		case text
+		case audio
+		case transcript
+	}
+
+	private struct Text: Codable {
+		let text: String
+
+		enum CodingKeys: CodingKey {
+			case text
+		}
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		let type = try container.decode(String.self, forKey: .type)
+
+		switch type {
+			case "text":
+				let container = try decoder.container(keyedBy: Text.CodingKeys.self)
+				self = try .text(container.decode(String.self, forKey: .text))
+			case "audio":
+				self = try .audio(Item.Audio(from: decoder))
+			default:
+				throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown content type: \(type)")
+		}
+	}
+}
+
+extension Item.Message.Content: Codable {
+	private enum CodingKeys: String, CodingKey {
+		case type
+		case text
+		case audio
+		case transcript
+	}
+
+	private struct Text: Codable {
+		let text: String
+
+		enum CodingKeys: CodingKey {
+			case text
+		}
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		let type = try container.decode(String.self, forKey: .type)
+
+		switch type {
+			case "text":
+				let container = try decoder.container(keyedBy: Text.CodingKeys.self)
+				self = try .text(container.decode(String.self, forKey: .text))
+			case "input_text":
+				let container = try decoder.container(keyedBy: Text.CodingKeys.self)
+				self = try .input_text(container.decode(String.self, forKey: .text))
+			case "audio":
+				self = try .audio(Item.Audio(from: decoder))
+			case "input_audio":
+				self = try .input_audio(Item.Audio(from: decoder))
+			default:
+				throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown content type: \(type)")
+		}
+	}
+
+	public func encode(to encoder: Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+
+		switch self {
 			case let .text(text):
-				self = .text(text)
+				try container.encode(text, forKey: .text)
+				try container.encode("text", forKey: .type)
+			case let .input_text(text):
+				try container.encode(text, forKey: .text)
+				try container.encode("input_text", forKey: .type)
+			case let .audio(audio):
+				try container.encode("audio", forKey: .type)
+				try container.encode(audio.transcript, forKey: .transcript)
+				try container.encode(audio.audio.base64EncodedString(), forKey: .audio)
+			case let .input_audio(audio):
+				try container.encode("input_audio", forKey: .type)
+				try container.encode(audio.transcript, forKey: .transcript)
+				try container.encode(audio.audio.base64EncodedString(), forKey: .audio)
 		}
 	}
 }

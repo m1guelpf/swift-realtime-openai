@@ -20,13 +20,22 @@ public struct Session: Codable, Equatable, Sendable {
 	}
 
 	public struct InputAudioTranscription: Codable, Equatable, Sendable {
+        /* The enabled property should exist going by the events page, however fails to update if it does.
+            - https://platform.openai.com/docs/api-reference/realtime-client-events/session-update
+         
 		public var enabled: Bool
+        */
 		public var model: String
+        
+        public init(enabled: Bool = true, model: String = "whisper-1") {
+//            self.enabled = enabled
+            self.model = model
+        }
 	}
 
 	public struct TurnDetection: Codable, Equatable, Sendable {
 		public enum TurnDetectionType: String, Codable, Sendable {
-			case server_vad
+			case serverVad = "server_vad"
 			case none
 		}
 
@@ -35,9 +44,21 @@ public struct Session: Codable, Equatable, Sendable {
 		/// Activation threshold for VAD (0.0 to 1.0).
 		public var threshold: Double
 		/// Amount of audio to include before speech starts (in milliseconds).
-		public var prefix_padding_ms: Int
+		public var prefixPaddingMs: Int
 		/// Duration of silence to detect speech stop (in milliseconds).
-		public var silence_duration_ms: Int
+		public var silenceDurationMs: Int
+        
+        public init(
+            type: TurnDetectionType,
+            threshold: Double,
+            prefixPaddingMs: Int,
+            silenceDurationMs: Int
+        ) {
+            self.type = type
+            self.threshold = threshold
+            self.prefixPaddingMs = prefixPaddingMs
+            self.silenceDurationMs = silenceDurationMs
+        }
 	}
 
 	public struct Tool: Codable, Equatable, Sendable {
@@ -252,27 +273,57 @@ public struct Session: Codable, Equatable, Sendable {
 	/// The unique ID of the session.
 	public var id: String?
 	/// The default model used for this session.
-	public var model: String
+	public var model: String?
 	/// The set of modalities the model can respond with.
-	public var modalities: [Modality]
+	public var modalities: [Modality]?
 	/// The default system instructions.
-	public var instructions: String
+	public var instructions: String?
 	/// The voice the model uses to respond.
 	public var voice: Voice
 	/// The format of input audio.
-	public var input_audio_format: AudioFormat
+	public var inputAudioFormat: AudioFormat
 	/// The format of output audio.
-	public var output_audio_format: AudioFormat
+	public var outputAudioFormat: AudioFormat
 	/// Configuration for input audio transcription.
-	public var input_audio_transcription: InputAudioTranscription?
+	public var inputAudioTranscription: InputAudioTranscription?
 	/// Configuration for turn detection.
-	public var turn_detection: TurnDetection?
+	public var turnDetection: TurnDetection?
 	/// Tools (functions) available to the model.
 	public var tools: [Tool]
 	/// How the model chooses tools.
-	public var tool_choice: ToolChoice
+	public var toolChoice: ToolChoice
 	/// Sampling temperature.
-	public var temperature: Double
+	public var temperature: Double?
 	/// Maximum number of output tokens.
-	public var max_output_tokens: Int?
+	public var maxOutputTokens: Int?
+    
+    public init(
+        id: String? = nil,
+        model: String? = nil,
+        modalities: [Modality]? = nil,
+        instructions: String? = nil,
+        voice: Voice = .alloy,
+        inputAudioFormat: AudioFormat = .pcm16,
+        outputAudioFormat: AudioFormat = .pcm16,
+        inputAudioTranscription: InputAudioTranscription? = nil,
+        turnDetection: TurnDetection? = nil,
+        tools: [Tool] = [],
+        toolChoice: ToolChoice = .auto,
+        temperature: Double? = nil,
+        maxOutputTokens: Int? = nil
+    ) {
+        self.id = id
+        self.model = model
+        self.modalities = modalities
+        self.instructions = instructions
+        self.voice = voice
+        self.inputAudioFormat = inputAudioFormat
+        self.outputAudioFormat = outputAudioFormat
+        self.inputAudioTranscription = inputAudioTranscription
+        self.turnDetection = turnDetection
+        self.tools = tools
+        self.toolChoice = toolChoice
+        self.temperature = temperature
+        self.maxOutputTokens = maxOutputTokens
+    }
 }

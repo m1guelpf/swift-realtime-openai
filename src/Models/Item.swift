@@ -3,7 +3,7 @@ import Foundation
 public enum Item: Identifiable, Equatable, Sendable {
 	public enum ItemStatus: String, Codable, Sendable {
 		case completed
-		case in_progress
+		case inProgress = "in_progress"
 		case incomplete
 	}
 
@@ -78,16 +78,16 @@ public enum Item: Identifiable, Equatable, Sendable {
 		public enum Content: Codable, Equatable, Sendable {
 			case text(String)
 			case audio(Audio)
-			case input_text(String)
-			case input_audio(Audio)
+			case inputText(String)
+			case inputAudio(Audio)
 
 			public var text: String? {
 				switch self {
 					case let .text(text):
 						return text
-					case let .input_text(text):
+					case let .inputText(text):
 						return text
-					case let .input_audio(audio):
+					case let .inputAudio(audio):
 						return audio.transcript
 					case let .audio(audio):
 						return audio.transcript
@@ -119,11 +119,11 @@ public enum Item: Identifiable, Equatable, Sendable {
 						self = try .text(container.decode(String.self, forKey: .text))
 					case "input_text":
 						let container = try decoder.container(keyedBy: Text.CodingKeys.self)
-						self = try .input_text(container.decode(String.self, forKey: .text))
+						self = try .inputText(container.decode(String.self, forKey: .text))
 					case "audio":
 						self = try .audio(Audio(from: decoder))
 					case "input_audio":
-						self = try .input_audio(Audio(from: decoder))
+						self = try .inputAudio(Audio(from: decoder))
 					default:
 						throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown content type: \(type)")
 				}
@@ -136,14 +136,14 @@ public enum Item: Identifiable, Equatable, Sendable {
 					case let .text(text):
 						try container.encode(text, forKey: .text)
 						try container.encode("text", forKey: .type)
-					case let .input_text(text):
+					case let .inputText(text):
 						try container.encode(text, forKey: .text)
 						try container.encode("input_text", forKey: .type)
 					case let .audio(audio):
 						try container.encode("audio", forKey: .type)
 						try container.encode(audio.audio, forKey: .audio)
 						try container.encode(audio.transcript, forKey: .transcript)
-					case let .input_audio(audio):
+					case let .inputAudio(audio):
 						try container.encode(audio.audio, forKey: .audio)
 						try container.encode("input_audio", forKey: .type)
 						try container.encode(audio.transcript, forKey: .transcript)
@@ -180,7 +180,7 @@ public enum Item: Identifiable, Equatable, Sendable {
 		/// The role associated with the item
 		public var role: ItemRole
 		/// The ID of the function call
-		public var call_id: String
+		public var callId: String
 		/// The name of the function being called
 		public var name: String
 		/// The arguments of the function call
@@ -197,7 +197,7 @@ public enum Item: Identifiable, Equatable, Sendable {
 		/// The role associated with the item
 		public var role: ItemRole
 		/// The ID of the function call
-		public var call_id: String
+		public var callId: String
 		/// The output of the function call
 		public var output: String
 	}

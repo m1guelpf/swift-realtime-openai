@@ -7,15 +7,15 @@ public struct Response: Identifiable, Codable, Equatable, Sendable {
 		/// The voice the model uses to respond.
 		public let voice: Session.Voice
 		/// The format of output audio.
-		public let output_audio_format: Session.AudioFormat
+		public let outputAudioFormat: Session.AudioFormat
 		/// Tools (functions) available to the model.
 		public let tools: [Session.Tool]
 		/// How the model chooses tools.
-		public let tool_choice: Session.ToolChoice
+		public let toolChoice: Session.ToolChoice
 		/// Sampling temperature.
 		public let temperature: Double
 		/// Maximum number of output tokens.
-		public let max_output_tokens: Int?
+		public let maxOutputTokens: Int?
 	}
 
 	public enum Status: String, Codable, Equatable, Sendable {
@@ -23,13 +23,13 @@ public struct Response: Identifiable, Codable, Equatable, Sendable {
 		case completed
 		case cancelled
 		case incomplete
-		case in_progress
+		case inProgress = "in_progress"
 	}
 
 	public struct Usage: Codable, Equatable, Sendable {
-		public let total_tokens: Int
-		public let input_tokens: Int
-		public let output_tokens: Int
+		public let totalTokens: Int
+		public let inputTokens: Int
+		public let outputTokens: Int
 	}
 
 	/// The unique ID of the response.

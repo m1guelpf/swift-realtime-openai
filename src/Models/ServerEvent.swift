@@ -498,22 +498,22 @@ extension ServerEvent: Decodable {
 
 extension ServerEvent.ResponseAudioDeltaEvent: Decodable {
 	private enum CodingKeys: CodingKey {
-		case event_id
-		case response_id
-		case item_id
-		case output_index
-		case content_index
+		case eventId
+		case responseId
+		case itemId
+		case outputIndex
+		case contentIndex
 		case delta
 	}
 
 	public init(from decoder: any Decoder) throws {
 		let container = try decoder.container(keyedBy: CodingKeys.self)
 
-		item_id = try container.decode(String.self, forKey: .item_id)
-		event_id = try container.decode(String.self, forKey: .event_id)
-		output_index = try container.decode(Int.self, forKey: .output_index)
-		response_id = try container.decode(String.self, forKey: .response_id)
-		content_index = try container.decode(Int.self, forKey: .content_index)
+        itemId = try container.decode(String.self, forKey: .itemId)
+		eventId = try container.decode(String.self, forKey: .eventId)
+		outputIndex = try container.decode(Int.self, forKey: .outputIndex)
+		responseId = try container.decode(String.self, forKey: .responseId)
+		contentIndex = try container.decode(Int.self, forKey: .contentIndex)
 
 		guard let decodedDelta = try Data(base64Encoded: container.decode(String.self, forKey: .delta)) else {
 			throw DecodingError.dataCorruptedError(forKey: .delta, in: container, debugDescription: "Invalid base64-encoded audio data.")

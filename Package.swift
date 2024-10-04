@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-	name: OpenAIRealTime",
+	name: "OpenAIRealTime",
 	platforms: [
 		.iOS(.v17),
 		.tvOS(.v17),

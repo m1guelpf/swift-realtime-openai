@@ -184,7 +184,7 @@ public struct Session: Codable, Equatable, Sendable {
 		public var parameters: FunctionParameters
 	}
 
-	public enum ToolChoice: Codable, Equatable, Sendable {
+	public enum ToolChoice: Equatable, Sendable {
 		case auto
 		case none
 		case required
@@ -192,60 +192,6 @@ public struct Session: Codable, Equatable, Sendable {
 
 		public init(function name: String) {
 			self = .function(name)
-		}
-
-		private enum FunctionCall: Codable {
-			case type
-			case function
-
-			enum CodingKeys: CodingKey {
-				case type
-				case function
-			}
-		}
-
-		public init(from decoder: any Decoder) throws {
-			let container = try decoder.singleValueContainer()
-
-			if let stringValue = try? container.decode(String.self) {
-				switch stringValue {
-					case "none":
-						self = .none
-					case "auto":
-						self = .auto
-					case "required":
-						self = .required
-					default:
-						throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid value for enum.")
-				}
-			} else {
-				let container = try decoder.container(keyedBy: FunctionCall.CodingKeys.self)
-				let functionContainer = try container.decode([String: String].self, forKey: .function)
-
-				guard let name = functionContainer["name"] else {
-					throw DecodingError.dataCorruptedError(forKey: .function, in: container, debugDescription: "Missing function name.")
-				}
-
-				self = .function(name)
-			}
-		}
-
-		public func encode(to encoder: Encoder) throws {
-			switch self {
-				case .none:
-					var container = encoder.singleValueContainer()
-					try container.encode("none")
-				case .auto:
-					var container = encoder.singleValueContainer()
-					try container.encode("auto")
-				case .required:
-					var container = encoder.singleValueContainer()
-					try container.encode("required")
-				case let .function(name):
-					var container = encoder.container(keyedBy: FunctionCall.CodingKeys.self)
-					try container.encode("function", forKey: .type)
-					try container.encode(["name": name], forKey: .function)
-			}
 		}
 	}
 
@@ -275,4 +221,60 @@ public struct Session: Codable, Equatable, Sendable {
 	public var temperature: Double
 	/// Maximum number of output tokens.
 	public var max_output_tokens: Int?
+}
+
+extension Session.ToolChoice: Codable {
+	private enum FunctionCall: Codable {
+		case type
+		case function
+
+		enum CodingKeys: CodingKey {
+			case type
+			case function
+		}
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.singleValueContainer()
+
+		if let stringValue = try? container.decode(String.self) {
+			switch stringValue {
+				case "none":
+					self = .none
+				case "auto":
+					self = .auto
+				case "required":
+					self = .required
+				default:
+					throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid value for enum.")
+			}
+		} else {
+			let container = try decoder.container(keyedBy: FunctionCall.CodingKeys.self)
+			let functionContainer = try container.decode([String: String].self, forKey: .function)
+
+			guard let name = functionContainer["name"] else {
+				throw DecodingError.dataCorruptedError(forKey: .function, in: container, debugDescription: "Missing function name.")
+			}
+
+			self = .function(name)
+		}
+	}
+
+	public func encode(to encoder: Encoder) throws {
+		switch self {
+			case .none:
+				var container = encoder.singleValueContainer()
+				try container.encode("none")
+			case .auto:
+				var container = encoder.singleValueContainer()
+				try container.encode("auto")
+			case .required:
+				var container = encoder.singleValueContainer()
+				try container.encode("required")
+			case let .function(name):
+				var container = encoder.container(keyedBy: FunctionCall.CodingKeys.self)
+				try container.encode("function", forKey: .type)
+				try container.encode(["name": name], forKey: .function)
+		}
+	}
 }

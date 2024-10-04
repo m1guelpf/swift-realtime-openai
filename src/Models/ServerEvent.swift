@@ -1,19 +1,21 @@
+import Foundation
+
 public enum ServerEvent: Sendable {
-	public struct ErrorEvent: Codable, Sendable {
+	public struct ErrorEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// Details of the error.
 		public let error: ServerError
 	}
 
-	public struct SessionEvent: Codable, Sendable {
+	public struct SessionEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The session resource.
 		public let session: Session
 	}
 
-	public struct ConversationCreatedEvent: Codable, Sendable {
+	public struct ConversationCreatedEvent: Decodable, Sendable {
 		public struct Conversation: Codable, Sendable {
 			/// The unique ID of the conversation.
 			public let id: String
@@ -25,7 +27,7 @@ public enum ServerEvent: Sendable {
 		public let conversation: Conversation
 	}
 
-	public struct InputAudioBufferCommittedEvent: Codable, Sendable {
+	public struct InputAudioBufferCommittedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The ID of the preceding item after which the new item will be inserted.
@@ -34,12 +36,12 @@ public enum ServerEvent: Sendable {
 		public let item_id: String
 	}
 
-	public struct InputAudioBufferClearedEvent: Codable, Sendable {
+	public struct InputAudioBufferClearedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 	}
 
-	public struct InputAudioBufferSpeechStartedEvent: Codable, Sendable {
+	public struct InputAudioBufferSpeechStartedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// Milliseconds since the session started when speech was detected.
@@ -48,7 +50,7 @@ public enum ServerEvent: Sendable {
 		public let item_id: String
 	}
 
-	public struct InputAudioBufferSpeechStoppedEvent: Codable, Sendable {
+	public struct InputAudioBufferSpeechStoppedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// Milliseconds since the session started when speech stopped.
@@ -57,7 +59,7 @@ public enum ServerEvent: Sendable {
 		public let item_id: String
 	}
 
-	public struct ConversationItemCreatedEvent: Codable, Sendable {
+	public struct ConversationItemCreatedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The ID of the preceding item.
@@ -66,7 +68,7 @@ public enum ServerEvent: Sendable {
 		public let item: Item
 	}
 
-	public struct ConversationItemInputAudioTranscriptionCompletedEvent: Codable, Sendable {
+	public struct ConversationItemInputAudioTranscriptionCompletedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The ID of the user message item.
@@ -77,7 +79,7 @@ public enum ServerEvent: Sendable {
 		public let transcription: String
 	}
 
-	public struct ConversationItemInputAudioTranscriptionFailedEvent: Codable, Sendable {
+	public struct ConversationItemInputAudioTranscriptionFailedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The ID of the user message item.
@@ -88,7 +90,7 @@ public enum ServerEvent: Sendable {
 		public let error: ServerError
 	}
 
-	public struct ConversationItemTruncatedEvent: Codable, Sendable {
+	public struct ConversationItemTruncatedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The ID of the assistant message item that was truncated.
@@ -99,21 +101,21 @@ public enum ServerEvent: Sendable {
 		public let audio_end_ms: Int
 	}
 
-	public struct ConversationItemDeletedEvent: Codable, Sendable {
+	public struct ConversationItemDeletedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The ID of the item that was deleted.
 		public let item_id: String
 	}
 
-	public struct ResponseEvent: Codable, Sendable {
+	public struct ResponseEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The response resource.
 		public let response: Response
 	}
 
-	public struct ResponseOutputItemAddedEvent: Codable, Sendable {
+	public struct ResponseOutputItemAddedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The ID of the response to which the item belongs.
@@ -124,7 +126,7 @@ public enum ServerEvent: Sendable {
 		public let item: Item
 	}
 
-	public struct ResponseOutputItemDoneEvent: Codable, Sendable {
+	public struct ResponseOutputItemDoneEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The ID of the response to which the item belongs.
@@ -135,7 +137,7 @@ public enum ServerEvent: Sendable {
 		public let item: Item
 	}
 
-	public struct ResponseContentPartAddedEvent: Codable, Sendable {
+	public struct ResponseContentPartAddedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The ID of the response.
@@ -150,7 +152,7 @@ public enum ServerEvent: Sendable {
 		public let part: Item.ContentPart
 	}
 
-	public struct ResponseContentPartDoneEvent: Codable, Sendable {
+	public struct ResponseContentPartDoneEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The ID of the response.
@@ -165,7 +167,7 @@ public enum ServerEvent: Sendable {
 		public let part: Item.ContentPart
 	}
 
-	public struct ResponseTextDeltaEvent: Codable, Sendable {
+	public struct ResponseTextDeltaEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The ID of the response.
@@ -180,7 +182,7 @@ public enum ServerEvent: Sendable {
 		public let delta: String
 	}
 
-	public struct ResponseTextDoneEvent: Codable, Sendable {
+	public struct ResponseTextDoneEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The ID of the response.
@@ -195,7 +197,7 @@ public enum ServerEvent: Sendable {
 		public let text: String
 	}
 
-	public struct ResponseAudioTranscriptDeltaEvent: Codable, Sendable {
+	public struct ResponseAudioTranscriptDeltaEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The ID of the response.
@@ -210,7 +212,7 @@ public enum ServerEvent: Sendable {
 		public let delta: String
 	}
 
-	public struct ResponseAudioTranscriptDoneEvent: Codable, Sendable {
+	public struct ResponseAudioTranscriptDoneEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The ID of the response.
@@ -225,7 +227,7 @@ public enum ServerEvent: Sendable {
 		public let transcript: String
 	}
 
-	public struct ResponseAudioDeltaEvent: Codable, Sendable {
+	public struct ResponseAudioDeltaEvent: Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The ID of the response.
@@ -237,10 +239,10 @@ public enum ServerEvent: Sendable {
 		/// The index of the content part in the item's content array.
 		public let content_index: Int
 		/// Base64-encoded audio data delta.
-		public let delta: String
+		public let delta: Data
 	}
 
-	public struct ResponseAudioDoneEvent: Codable, Sendable {
+	public struct ResponseAudioDoneEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The ID of the response.
@@ -253,7 +255,7 @@ public enum ServerEvent: Sendable {
 		public let content_index: Int
 	}
 
-	public struct ResponseFunctionCallArgumentsDeltaEvent: Codable, Sendable {
+	public struct ResponseFunctionCallArgumentsDeltaEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The ID of the response.
@@ -268,7 +270,7 @@ public enum ServerEvent: Sendable {
 		public let delta: String
 	}
 
-	public struct ResponseFunctionCallArgumentsDoneEvent: Codable, Sendable {
+	public struct ResponseFunctionCallArgumentsDoneEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let event_id: String
 		/// The ID of the response.
@@ -283,7 +285,7 @@ public enum ServerEvent: Sendable {
 		public let arguments: String
 	}
 
-	public struct RateLimitsUpdatedEvent: Codable, Sendable {
+	public struct RateLimitsUpdatedEvent: Decodable, Sendable {
 		public struct RateLimit: Codable, Sendable {
 			/// The name of the rate limit
 			public let name: String
@@ -491,5 +493,31 @@ extension ServerEvent: Decodable {
 			default:
 				throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown event type: \(eventType)")
 		}
+	}
+}
+
+extension ServerEvent.ResponseAudioDeltaEvent: Decodable {
+	private enum CodingKeys: CodingKey {
+		case event_id
+		case response_id
+		case item_id
+		case output_index
+		case content_index
+		case delta
+	}
+
+	public init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+
+		item_id = try container.decode(String.self, forKey: .item_id)
+		event_id = try container.decode(String.self, forKey: .event_id)
+		output_index = try container.decode(Int.self, forKey: .output_index)
+		response_id = try container.decode(String.self, forKey: .response_id)
+		content_index = try container.decode(Int.self, forKey: .content_index)
+
+		guard let decodedDelta = try Data(base64Encoded: container.decode(String.self, forKey: .delta)) else {
+			throw DecodingError.dataCorruptedError(forKey: .delta, in: container, debugDescription: "Invalid base64-encoded audio data.")
+		}
+		delta = decodedDelta
 	}
 }

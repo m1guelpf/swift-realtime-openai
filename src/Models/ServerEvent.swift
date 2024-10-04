@@ -359,6 +359,69 @@ public enum ServerEvent: Sendable {
 	case rateLimitsUpdated(RateLimitsUpdatedEvent)
 }
 
+extension ServerEvent: Identifiable {
+	public var id: String {
+		switch self {
+			case let .error(event):
+				return event.event_id
+			case let .sessionCreated(event):
+				return event.event_id
+			case let .sessionUpdated(event):
+				return event.event_id
+			case let .conversationCreated(event):
+				return event.event_id
+			case let .inputAudioBufferCommitted(event):
+				return event.event_id
+			case let .inputAudioBufferCleared(event):
+				return event.event_id
+			case let .inputAudioBufferSpeechStarted(event):
+				return event.event_id
+			case let .inputAudioBufferSpeechStopped(event):
+				return event.event_id
+			case let .conversationItemCreated(event):
+				return event.event_id
+			case let .conversationItemInputAudioTranscriptionCompleted(event):
+				return event.event_id
+			case let .conversationItemInputAudioTranscriptionFailed(event):
+				return event.event_id
+			case let .conversationItemTruncated(event):
+				return event.event_id
+			case let .conversationItemDeleted(event):
+				return event.event_id
+			case let .responseCreated(event):
+				return event.event_id
+			case let .responseDone(event):
+				return event.event_id
+			case let .responseOutputItemAdded(event):
+				return event.event_id
+			case let .responseOutputItemDone(event):
+				return event.event_id
+			case let .responseContentPartAdded(event):
+				return event.event_id
+			case let .responseContentPartDone(event):
+				return event.event_id
+			case let .responseTextDelta(event):
+				return event.event_id
+			case let .responseTextDone(event):
+				return event.event_id
+			case let .responseAudioTranscriptDelta(event):
+				return event.event_id
+			case let .responseAudioTranscriptDone(event):
+				return event.event_id
+			case let .responseAudioDelta(event):
+				return event.event_id
+			case let .responseAudioDone(event):
+				return event.event_id
+			case let .responseFunctionCallArgumentsDelta(event):
+				return event.event_id
+			case let .responseFunctionCallArgumentsDone(event):
+				return event.event_id
+			case let .rateLimitsUpdated(event):
+				return event.event_id
+		}
+	}
+}
+
 extension ServerEvent: Decodable {
 	private enum CodingKeys: String, CodingKey {
 		case type

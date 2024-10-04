@@ -1,6 +1,6 @@
 import Foundation
 
-public enum Item: Equatable, Sendable {
+public enum Item: Identifiable, Equatable, Sendable {
 	public enum ItemStatus: String, Codable, Sendable {
 		case completed
 		case in_progress

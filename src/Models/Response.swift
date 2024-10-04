@@ -1,4 +1,4 @@
-public struct Response: Codable, Equatable, Sendable {
+public struct Response: Identifiable, Codable, Equatable, Sendable {
 	public struct Config: Codable, Equatable, Sendable {
 		/// The modalities for the response.
 		public let modalities: [Session.Modality]

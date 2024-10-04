@@ -4,16 +4,18 @@ public final class RealtimeAPI: NSObject, Sendable {
 	@MainActor public var onDisconnect: (@Sendable () -> Void)?
 	public let events: AsyncThrowingStream<ServerEvent, Error>
 
-    private let encoder: JSONEncoder = {
-        let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        return encoder
-    }()
-    private let decoder: JSONDecoder = {
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        return decoder
-    }()
+	private let encoder: JSONEncoder = {
+		let encoder = JSONEncoder()
+		encoder.keyEncodingStrategy = .convertToSnakeCase
+		return encoder
+	}()
+
+	private let decoder: JSONDecoder = {
+		let decoder = JSONDecoder()
+		decoder.keyDecodingStrategy = .convertFromSnakeCase
+		return decoder
+	}()
+
 	private let task: URLSessionWebSocketTask
 	private let stream: AsyncThrowingStream<ServerEvent, Error>.Continuation
 

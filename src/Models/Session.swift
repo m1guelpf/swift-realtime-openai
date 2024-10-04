@@ -20,17 +20,11 @@ public struct Session: Codable, Equatable, Sendable {
 	}
 
 	public struct InputAudioTranscription: Codable, Equatable, Sendable {
-        /* The enabled property should exist going by the events page, however fails to update if it does.
-            - https://platform.openai.com/docs/api-reference/realtime-client-events/session-update
-         
-		public var enabled: Bool
-        */
 		public var model: String
-        
-        public init(enabled: Bool = true, model: String = "whisper-1") {
-//            self.enabled = enabled
-            self.model = model
-        }
+
+		public init(enabled _: Bool = true, model: String = "whisper-1") {
+			self.model = model
+		}
 	}
 
 	public struct TurnDetection: Codable, Equatable, Sendable {
@@ -47,18 +41,18 @@ public struct Session: Codable, Equatable, Sendable {
 		public var prefixPaddingMs: Int
 		/// Duration of silence to detect speech stop (in milliseconds).
 		public var silenceDurationMs: Int
-        
-        public init(
-            type: TurnDetectionType,
-            threshold: Double,
-            prefixPaddingMs: Int,
-            silenceDurationMs: Int
-        ) {
-            self.type = type
-            self.threshold = threshold
-            self.prefixPaddingMs = prefixPaddingMs
-            self.silenceDurationMs = silenceDurationMs
-        }
+
+		public init(
+			type: TurnDetectionType,
+			threshold: Double,
+			prefixPaddingMs: Int,
+			silenceDurationMs: Int
+		) {
+			self.type = type
+			self.threshold = threshold
+			self.prefixPaddingMs = prefixPaddingMs
+			self.silenceDurationMs = silenceDurationMs
+		}
 	}
 
 	public struct Tool: Codable, Equatable, Sendable {
@@ -219,11 +213,11 @@ public struct Session: Codable, Equatable, Sendable {
 	/// The unique ID of the session.
 	public var id: String?
 	/// The default model used for this session.
-	public var model: String?
+	public var model: String
 	/// The set of modalities the model can respond with.
-	public var modalities: [Modality]?
+	public var modalities: [Modality]
 	/// The default system instructions.
-	public var instructions: String?
+	public var instructions: String
 	/// The voice the model uses to respond.
 	public var voice: Voice
 	/// The format of input audio.
@@ -239,39 +233,39 @@ public struct Session: Codable, Equatable, Sendable {
 	/// How the model chooses tools.
 	public var toolChoice: ToolChoice
 	/// Sampling temperature.
-	public var temperature: Double?
+	public var temperature: Double
 	/// Maximum number of output tokens.
 	public var maxOutputTokens: Int?
-    
-    public init(
-        id: String? = nil,
-        model: String? = nil,
-        modalities: [Modality]? = nil,
-        instructions: String? = nil,
-        voice: Voice = .alloy,
-        inputAudioFormat: AudioFormat = .pcm16,
-        outputAudioFormat: AudioFormat = .pcm16,
-        inputAudioTranscription: InputAudioTranscription? = nil,
-        turnDetection: TurnDetection? = nil,
-        tools: [Tool] = [],
-        toolChoice: ToolChoice = .auto,
-        temperature: Double? = nil,
-        maxOutputTokens: Int? = nil
-    ) {
-        self.id = id
-        self.model = model
-        self.modalities = modalities
-        self.instructions = instructions
-        self.voice = voice
-        self.inputAudioFormat = inputAudioFormat
-        self.outputAudioFormat = outputAudioFormat
-        self.inputAudioTranscription = inputAudioTranscription
-        self.turnDetection = turnDetection
-        self.tools = tools
-        self.toolChoice = toolChoice
-        self.temperature = temperature
-        self.maxOutputTokens = maxOutputTokens
-    }
+
+	public init(
+		id: String? = nil,
+		model: String,
+		tools: [Tool] = [],
+		instructions: String,
+		voice: Voice = .alloy,
+		temperature: Double = 1,
+		maxOutputTokens: Int? = nil,
+		toolChoice: ToolChoice = .auto,
+		turnDetection: TurnDetection? = nil,
+		inputAudioFormat: AudioFormat = .pcm16,
+		outputAudioFormat: AudioFormat = .pcm16,
+		modalities: [Modality] = [.text, .audio],
+		inputAudioTranscription: InputAudioTranscription? = nil
+	) {
+		self.id = id
+		self.model = model
+		self.tools = tools
+		self.voice = voice
+		self.toolChoice = toolChoice
+		self.modalities = modalities
+		self.temperature = temperature
+		self.instructions = instructions
+		self.turnDetection = turnDetection
+		self.maxOutputTokens = maxOutputTokens
+		self.inputAudioFormat = inputAudioFormat
+		self.outputAudioFormat = outputAudioFormat
+		self.inputAudioTranscription = inputAudioTranscription
+	}
 }
 
 extension Session.ToolChoice: Codable {

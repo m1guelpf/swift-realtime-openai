@@ -509,7 +509,7 @@ extension ServerEvent.ResponseAudioDeltaEvent: Decodable {
 	public init(from decoder: any Decoder) throws {
 		let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        itemId = try container.decode(String.self, forKey: .itemId)
+		itemId = try container.decode(String.self, forKey: .itemId)
 		eventId = try container.decode(String.self, forKey: .eventId)
 		outputIndex = try container.decode(Int.self, forKey: .outputIndex)
 		responseId = try container.decode(String.self, forKey: .responseId)

@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 public final class RealtimeAPI: NSObject, Sendable {
 	@MainActor public var onDisconnect: (@Sendable () -> Void)?

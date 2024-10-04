@@ -7,6 +7,6 @@ public struct ServerError: Codable, Equatable, Sendable {
 	public let message: String
 	/// Parameter related to the error, if any.
 	public let param: String?
-	/// The event_id of the client event that caused the error, if applicable.
-	public let event_id: String?
+	/// The eventId of the client event that caused the error, if applicable.
+	public let eventId: String?
 }

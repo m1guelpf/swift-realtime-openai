@@ -4,8 +4,16 @@ public final class RealtimeAPI: NSObject, Sendable {
 	@MainActor public var onDisconnect: (@Sendable () -> Void)?
 	public let events: AsyncThrowingStream<ServerEvent, Error>
 
-	private let encoder = JSONEncoder()
-	private let decoder = JSONDecoder()
+    private let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        return encoder
+    }()
+    private let decoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return decoder
+    }()
 	private let task: URLSessionWebSocketTask
 	private let stream: AsyncThrowingStream<ServerEvent, Error>.Continuation
 
@@ -20,12 +28,12 @@ public final class RealtimeAPI: NSObject, Sendable {
 		task.resume()
 	}
 
-	public convenience init(auth_token: String, model: String = "gpt-4o-realtime-preview-2024-10-01") {
+	public convenience init(authToken: String, model: String = "gpt-4o-realtime-preview-2024-10-01") {
 		var request = URLRequest(url: URL(string: "wss://api.openai.com/v1/realtime")!.appending(queryItems: [
 			URLQueryItem(name: "model", value: model),
 		]))
 		request.addValue("realtime=v1", forHTTPHeaderField: "OpenAI-Beta")
-		request.addValue("Bearer \(auth_token)", forHTTPHeaderField: "Authorization")
+		request.addValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
 
 		self.init(connectingTo: request)
 	}

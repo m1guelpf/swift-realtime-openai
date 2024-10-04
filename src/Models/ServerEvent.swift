@@ -3,14 +3,14 @@ import Foundation
 public enum ServerEvent: Sendable {
 	public struct ErrorEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// Details of the error.
 		public let error: ServerError
 	}
 
 	public struct SessionEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The session resource.
 		public let session: Session
 	}
@@ -22,265 +22,265 @@ public enum ServerEvent: Sendable {
 		}
 
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The conversation resource.
 		public let conversation: Conversation
 	}
 
 	public struct InputAudioBufferCommittedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The ID of the preceding item after which the new item will be inserted.
-		public let previous_item_id: String?
+		public let previousItemId: String?
 		/// The ID of the user message item that will be created.
-		public let item_id: String
+		public let itemId: String
 	}
 
 	public struct InputAudioBufferClearedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 	}
 
 	public struct InputAudioBufferSpeechStartedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// Milliseconds since the session started when speech was detected.
-		public let audio_start_ms: Int
+		public let audioStartMs: Int
 		/// The ID of the user message item that will be created when speech stops.
-		public let item_id: String
+		public let itemId: String
 	}
 
 	public struct InputAudioBufferSpeechStoppedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// Milliseconds since the session started when speech stopped.
-		public let audio_end_ms: Int
+		public let audioEndMs: Int
 		/// The ID of the user message item that will be created.
-		public let item_id: String
+		public let itemId: String
 	}
 
 	public struct ConversationItemCreatedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The ID of the preceding item.
-		public let previous_item_id: String?
+		public let previousItemId: String?
 		/// The item that was created.
 		public let item: Item
 	}
 
 	public struct ConversationItemInputAudioTranscriptionCompletedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The ID of the user message item.
-		public let item_id: String
+		public let itemId: String
 		/// The index of the content part containing the audio.
-		public let content_index: Int
+		public let contentIndex: Int
 		/// The transcribed text.
-		public let transcription: String
+		public let transcript: String
 	}
 
 	public struct ConversationItemInputAudioTranscriptionFailedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The ID of the user message item.
-		public let item_id: String
+		public let itemId: String
 		/// The index of the content part containing the audio.
-		public let content_index: Int
+		public let contentIndex: Int
 		/// Details of the transcription error.
 		public let error: ServerError
 	}
 
 	public struct ConversationItemTruncatedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The ID of the assistant message item that was truncated.
-		public let item_id: String
+		public let itemId: String
 		/// The index of the content part that was truncated.
-		public let content_index: Int
+		public let contentIndex: Int
 		/// The duration up to which the audio was truncated, in milliseconds.
-		public let audio_end_ms: Int
+		public let audioEndMs: Int
 	}
 
 	public struct ConversationItemDeletedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The ID of the item that was deleted.
-		public let item_id: String
+		public let itemId: String
 	}
 
 	public struct ResponseEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The response resource.
 		public let response: Response
 	}
 
 	public struct ResponseOutputItemAddedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The ID of the response to which the item belongs.
-		public let response_id: String
+		public let responseId: String
 		/// The index of the output item in the response.
-		public let output_index: Int
+		public let outputIndex: Int
 		/// The item that was added.
 		public let item: Item
 	}
 
 	public struct ResponseOutputItemDoneEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The ID of the response to which the item belongs.
-		public let response_id: String
+		public let responseId: String
 		/// The index of the output item in the response.
-		public let output_index: Int
+		public let outputIndex: Int
 		/// The completed item.
 		public let item: Item
 	}
 
 	public struct ResponseContentPartAddedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The ID of the response.
-		public let response_id: String
+		public let responseId: String
 		/// The ID of the item to which the content part was added.
-		public let item_id: String
+		public let itemId: String
 		/// The index of the output item in the response.
-		public let output_index: Int
+		public let outputIndex: Int
 		/// The index of the content part in the item's content array.
-		public let content_index: Int
+		public let contentIndex: Int
 		/// The content part that was added.
 		public let part: Item.ContentPart
 	}
 
 	public struct ResponseContentPartDoneEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The ID of the response.
-		public let response_id: String
+		public let responseId: String
 		/// The ID of the item.
-		public let item_id: String
+		public let itemId: String
 		/// The index of the output item in the response.
-		public let output_index: Int
+		public let outputIndex: Int
 		/// The index of the content part in the item's content array.
-		public let content_index: Int
+		public let contentIndex: Int
 		/// The content part that is done.
 		public let part: Item.ContentPart
 	}
 
 	public struct ResponseTextDeltaEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The ID of the response.
-		public let response_id: String
+		public let responseId: String
 		/// The ID of the item.
-		public let item_id: String
+		public let itemId: String
 		/// The index of the output item in the response.
-		public let output_index: Int
+		public let outputIndex: Int
 		/// The index of the content part in the item's content array.
-		public let content_index: Int
+		public let contentIndex: Int
 		/// The text delta.
 		public let delta: String
 	}
 
 	public struct ResponseTextDoneEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The ID of the response.
-		public let response_id: String
+		public let responseId: String
 		/// The ID of the item.
-		public let item_id: String
+		public let itemId: String
 		/// The index of the output item in the response.
-		public let output_index: Int
+		public let outputIndex: Int
 		/// The index of the content part in the item's content array.
-		public let content_index: Int
+		public let contentIndex: Int
 		/// The final text content.
 		public let text: String
 	}
 
 	public struct ResponseAudioTranscriptDeltaEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The ID of the response.
-		public let response_id: String
+		public let responseId: String
 		/// The ID of the item.
-		public let item_id: String
+		public let itemId: String
 		/// The index of the output item in the response.
-		public let output_index: Int
+		public let outputIndex: Int
 		/// The index of the content part in the item's content array.
-		public let content_index: Int
+		public let contentIndex: Int
 		/// The transcript delta.
 		public let delta: String
 	}
 
 	public struct ResponseAudioTranscriptDoneEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The ID of the response.
-		public let response_id: String
+		public let responseId: String
 		/// The ID of the item.
-		public let item_id: String
+		public let itemId: String
 		/// The index of the output item in the response.
-		public let output_index: Int
+		public let outputIndex: Int
 		/// The index of the content part in the item's content array.
-		public let content_index: Int
+		public let contentIndex: Int
 		/// The final transcript of the audio.
 		public let transcript: String
 	}
 
 	public struct ResponseAudioDeltaEvent: Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The ID of the response.
-		public let response_id: String
+		public let responseId: String
 		/// The ID of the item.
-		public let item_id: String
+		public let itemId: String
 		/// The index of the output item in the response.
-		public let output_index: Int
+		public let outputIndex: Int
 		/// The index of the content part in the item's content array.
-		public let content_index: Int
+		public let contentIndex: Int
 		/// Base64-encoded audio data delta.
 		public let delta: Data
 	}
 
 	public struct ResponseAudioDoneEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The ID of the response.
-		public let response_id: String
+		public let responseId: String
 		/// The ID of the item.
-		public let item_id: String
+		public let itemId: String
 		/// The index of the output item in the response.
-		public let output_index: Int
+		public let outputIndex: Int
 		/// The index of the content part in the item's content array.
-		public let content_index: Int
+		public let contentIndex: Int
 	}
 
 	public struct ResponseFunctionCallArgumentsDeltaEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The ID of the response.
-		public let response_id: String
+		public let responseId: String
 		/// The ID of the function call item.
-		public let item_id: String
+		public let itemId: String
 		/// The index of the output item in the response.
-		public let output_index: Int
+		public let outputIndex: Int
 		/// The ID of the function call.
-		public let call_id: String
+		public let callId: String
 		/// The arguments delta as a JSON string.
 		public let delta: String
 	}
 
 	public struct ResponseFunctionCallArgumentsDoneEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// The ID of the response.
-		public let response_id: String
+		public let responseId: String
 		/// The ID of the function call item.
-		public let item_id: String
+		public let itemId: String
 		/// The index of the output item in the response.
-		public let output_index: Int
+		public let outputIndex: Int
 		/// The ID of the function call.
-		public let call_id: String
+		public let callId: String
 		/// The final arguments as a JSON string.
 		public let arguments: String
 	}
@@ -294,13 +294,13 @@ public enum ServerEvent: Sendable {
 			/// The remaining value before the limit is reached.
 			public let remaining: Int
 			/// Seconds until the rate limit resets.
-			public let reset_seconds: Double
+			public let resetSeconds: Double
 		}
 
 		/// The unique ID of the server event.
-		public let event_id: String
+		public let eventId: String
 		/// List of rate limit information.
-		public let rate_limits: [RateLimit]
+		public let rateLimits: [RateLimit]
 	}
 
 	/// Returned when an error occurs.
@@ -365,61 +365,61 @@ extension ServerEvent: Identifiable {
 	public var id: String {
 		switch self {
 			case let .error(event):
-				return event.event_id
+				return event.eventId
 			case let .sessionCreated(event):
-				return event.event_id
+				return event.eventId
 			case let .sessionUpdated(event):
-				return event.event_id
+				return event.eventId
 			case let .conversationCreated(event):
-				return event.event_id
+				return event.eventId
 			case let .inputAudioBufferCommitted(event):
-				return event.event_id
+				return event.eventId
 			case let .inputAudioBufferCleared(event):
-				return event.event_id
+				return event.eventId
 			case let .inputAudioBufferSpeechStarted(event):
-				return event.event_id
+				return event.eventId
 			case let .inputAudioBufferSpeechStopped(event):
-				return event.event_id
+				return event.eventId
 			case let .conversationItemCreated(event):
-				return event.event_id
+				return event.eventId
 			case let .conversationItemInputAudioTranscriptionCompleted(event):
-				return event.event_id
+				return event.eventId
 			case let .conversationItemInputAudioTranscriptionFailed(event):
-				return event.event_id
+				return event.eventId
 			case let .conversationItemTruncated(event):
-				return event.event_id
+				return event.eventId
 			case let .conversationItemDeleted(event):
-				return event.event_id
+				return event.eventId
 			case let .responseCreated(event):
-				return event.event_id
+				return event.eventId
 			case let .responseDone(event):
-				return event.event_id
+				return event.eventId
 			case let .responseOutputItemAdded(event):
-				return event.event_id
+				return event.eventId
 			case let .responseOutputItemDone(event):
-				return event.event_id
+				return event.eventId
 			case let .responseContentPartAdded(event):
-				return event.event_id
+				return event.eventId
 			case let .responseContentPartDone(event):
-				return event.event_id
+				return event.eventId
 			case let .responseTextDelta(event):
-				return event.event_id
+				return event.eventId
 			case let .responseTextDone(event):
-				return event.event_id
+				return event.eventId
 			case let .responseAudioTranscriptDelta(event):
-				return event.event_id
+				return event.eventId
 			case let .responseAudioTranscriptDone(event):
-				return event.event_id
+				return event.eventId
 			case let .responseAudioDelta(event):
-				return event.event_id
+				return event.eventId
 			case let .responseAudioDone(event):
-				return event.event_id
+				return event.eventId
 			case let .responseFunctionCallArgumentsDelta(event):
-				return event.event_id
+				return event.eventId
 			case let .responseFunctionCallArgumentsDone(event):
-				return event.event_id
+				return event.eventId
 			case let .rateLimitsUpdated(event):
-				return event.event_id
+				return event.eventId
 		}
 	}
 }
@@ -498,22 +498,22 @@ extension ServerEvent: Decodable {
 
 extension ServerEvent.ResponseAudioDeltaEvent: Decodable {
 	private enum CodingKeys: CodingKey {
-		case event_id
-		case response_id
-		case item_id
-		case output_index
-		case content_index
+		case eventId
+		case responseId
+		case itemId
+		case outputIndex
+		case contentIndex
 		case delta
 	}
 
 	public init(from decoder: any Decoder) throws {
 		let container = try decoder.container(keyedBy: CodingKeys.self)
 
-		item_id = try container.decode(String.self, forKey: .item_id)
-		event_id = try container.decode(String.self, forKey: .event_id)
-		output_index = try container.decode(Int.self, forKey: .output_index)
-		response_id = try container.decode(String.self, forKey: .response_id)
-		content_index = try container.decode(Int.self, forKey: .content_index)
+        itemId = try container.decode(String.self, forKey: .itemId)
+		eventId = try container.decode(String.self, forKey: .eventId)
+		outputIndex = try container.decode(Int.self, forKey: .outputIndex)
+		responseId = try container.decode(String.self, forKey: .responseId)
+		contentIndex = try container.decode(Int.self, forKey: .contentIndex)
 
 		guard let decodedDelta = try Data(base64Encoded: container.decode(String.self, forKey: .delta)) else {
 			throw DecodingError.dataCorruptedError(forKey: .delta, in: container, debugDescription: "Invalid base64-encoded audio data.")

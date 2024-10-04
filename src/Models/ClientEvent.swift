@@ -3,7 +3,7 @@ import Foundation
 public enum ClientEvent: Equatable, Sendable {
 	public struct SessionUpdateEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
-		public var event_id: String?
+		public var eventId: String?
 		/// Session configuration to update.
 		public var session: Session
 
@@ -12,7 +12,7 @@ public enum ClientEvent: Equatable, Sendable {
 
 	public struct InputAudioBufferAppendEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
-		public var event_id: String?
+		public var eventId: String?
 		/// Base64-encoded audio bytes.
 		public var audio: String
 
@@ -21,23 +21,23 @@ public enum ClientEvent: Equatable, Sendable {
 
 	public struct InputAudioBufferCommitEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
-		public var event_id: String?
+		public var eventId: String?
 
 		private let type = "input_audio_buffer.commit"
 	}
 
 	public struct InputAudioBufferClearEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
-		public var event_id: String?
+		public var eventId: String?
 
 		private let type = "input_audio_buffer.clear"
 	}
 
 	public struct ConversationItemCreateEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
-		public var event_id: String?
+		public var eventId: String?
 		/// The ID of the preceding item after which the new item will be inserted.
-		public var previous_item_id: String?
+		public var previousItemId: String?
 		/// The item to add to the conversation.
 		public var item: Item
 
@@ -46,33 +46,33 @@ public enum ClientEvent: Equatable, Sendable {
 
 	public struct ConversationItemTruncateEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
-		public var event_id: String?
+		public var eventId: String?
 		/// The ID of the assistant message item to truncate.
-		public var item_id: String?
+		public var itemId: String?
 		/// The index of the content part to truncate.
-		public var content_index: Int
+		public var contentIndex: Int
 		/// Inclusive duration up to which audio is truncated, in milliseconds.
-		public var audio_end_ms: Int
+		public var audioEndMs: Int
 
 		private let type = "conversation.item.truncate"
 	}
 
 	public struct ConversationItemDeleteEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
-		public var event_id: String?
+		public var eventId: String?
 		/// The ID of the assistant message item to truncate.
-		public var item_id: String?
+		public var itemId: String?
 		/// The index of the content part to truncate.
-		public var content_index: Int
+		public var contentIndex: Int
 		/// Inclusive duration up to which audio is truncated, in milliseconds.
-		public var audio_end_ms: Int
+		public var audioEndMs: Int
 
 		private let type = "conversation.item.delete"
 	}
 
 	public struct ResponseCreateEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
-		public var event_id: String?
+		public var eventId: String?
 		/// Configuration for the response.
 		public var response: Response.Config?
 
@@ -81,7 +81,7 @@ public enum ClientEvent: Equatable, Sendable {
 
 	public struct ResponseCancelEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
-		public var event_id: String?
+		public var eventId: String?
 
 		private let type = "response.cancel"
 	}
@@ -108,39 +108,39 @@ public enum ClientEvent: Equatable, Sendable {
 
 public extension ClientEvent {
 	static func updateSession(id: String? = nil, _ session: Session) -> Self {
-		.updateSession(SessionUpdateEvent(event_id: id, session: session))
+		.updateSession(SessionUpdateEvent(eventId: id, session: session))
 	}
 
 	static func appendInputAudioBuffer(id: String? = nil, encoding audio: Data) -> Self {
-		.appendInputAudioBuffer(InputAudioBufferAppendEvent(event_id: id, audio: audio.base64EncodedString()))
+		.appendInputAudioBuffer(InputAudioBufferAppendEvent(eventId: id, audio: audio.base64EncodedString()))
 	}
 
 	static func commitInputAudioBuffer(id: String? = nil) -> Self {
-		.commitInputAudioBuffer(InputAudioBufferCommitEvent(event_id: id))
+		.commitInputAudioBuffer(InputAudioBufferCommitEvent(eventId: id))
 	}
 
 	static func clearInputAudioBuffer(id: String? = nil) -> Self {
-		.clearInputAudioBuffer(InputAudioBufferClearEvent(event_id: id))
+		.clearInputAudioBuffer(InputAudioBufferClearEvent(eventId: id))
 	}
 
 	static func createConversationItem(id: String? = nil, previous previousID: String? = nil, _ item: Item) -> Self {
-		.createConversationItem(ConversationItemCreateEvent(event_id: id, previous_item_id: previousID, item: item))
+		.createConversationItem(ConversationItemCreateEvent(eventId: id, previousItemId: previousID, item: item))
 	}
 
-	static func truncateConversationItem(id event_id: String? = nil, for id: String? = nil, at index: Int, at_audio audio_index: Int) -> Self {
-		.truncateConversationItem(ConversationItemTruncateEvent(event_id: event_id, item_id: id, content_index: index, audio_end_ms: audio_index))
+	static func truncateConversationItem(id eventId: String? = nil, for id: String? = nil, at index: Int, atAudio audioIndex: Int) -> Self {
+		.truncateConversationItem(ConversationItemTruncateEvent(eventId: eventId, itemId: id, contentIndex: index, audioEndMs: audioIndex))
 	}
 
-	static func deleteConversationItem(id event_id: String? = nil, for id: String? = nil, at index: Int, at_audio audio_index: Int) -> Self {
-		.deleteConversationItem(ConversationItemDeleteEvent(event_id: event_id, item_id: id, content_index: index, audio_end_ms: audio_index))
+	static func deleteConversationItem(id eventId: String? = nil, for id: String? = nil, at index: Int, atAudio audioIndex: Int) -> Self {
+		.deleteConversationItem(ConversationItemDeleteEvent(eventId: eventId, itemId: id, contentIndex: index, audioEndMs: audioIndex))
 	}
 
 	static func createResponse(id: String? = nil, _ response: Response.Config? = nil) -> Self {
-		.createResponse(ResponseCreateEvent(event_id: id, response: response))
+		.createResponse(ResponseCreateEvent(eventId: id, response: response))
 	}
 
 	static func cancelResponse(id: String? = nil) -> Self {
-		.cancelResponse(ResponseCancelEvent(event_id: id))
+		.cancelResponse(ResponseCancelEvent(eventId: id))
 	}
 }
 

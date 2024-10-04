@@ -80,7 +80,7 @@ public enum Item: Identifiable, Equatable, Sendable {
 		/// The role associated with the item
 		public var role: ItemRole
 		/// The ID of the function call
-		public var call_id: String
+		public var callId: String
 		/// The name of the function being called
 		public var name: String
 		/// The arguments of the function call
@@ -97,7 +97,7 @@ public enum Item: Identifiable, Equatable, Sendable {
 		/// The role associated with the item
 		public var role: ItemRole
 		/// The ID of the function call
-		public var call_id: String
+		public var callId: String
 		/// The output of the function call
 		public var output: String
 	}

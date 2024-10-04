@@ -118,6 +118,14 @@ private extension Conversation {
 				id = event.conversation.id
 			case let .conversationItemCreated(event):
 				entries.append(event.item)
+			case let .conversationItemInputAudioTranscriptionCompleted(event):
+				updateEvent(id: event.itemId) { message in
+					guard case let .input_audio(audio) = message.content[event.contentIndex] else { return }
+
+					message.content[event.contentIndex] = .input_audio(.init(audio: audio.audio, transcript: event.transcript))
+				}
+			case let .conversationItemInputAudioTranscriptionFailed(event):
+				errorStream.yield(event.error)
 			case let .conversationItemDeleted(event):
 				entries.removeAll { $0.id == event.itemId }
 			case let .responseContentPartAdded(event):

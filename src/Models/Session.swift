@@ -22,7 +22,7 @@ public struct Session: Codable, Equatable, Sendable {
 	public struct InputAudioTranscription: Codable, Equatable, Sendable {
 		public var model: String
 
-		public init(enabled _: Bool = true, model: String = "whisper-1") {
+		public init(model: String = "whisper-1") {
 			self.model = model
 		}
 	}

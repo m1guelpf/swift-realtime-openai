@@ -18,6 +18,11 @@ public enum Item: Identifiable, Equatable, Sendable {
 		public var audio: String?
 		/// The transcript of the audio.
 		public var transcript: String?
+
+		public init(audio: String? = nil, transcript: String? = nil) {
+			self.audio = audio
+			self.transcript = transcript
+		}
 	}
 
 	public enum ContentPart: Codable, Equatable, Sendable {

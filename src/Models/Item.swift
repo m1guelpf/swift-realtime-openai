@@ -76,6 +76,19 @@ public enum Item: Identifiable, Equatable, Sendable {
 			case input_text(String)
 			case input_audio(Audio)
 
+			public var text: String? {
+				switch self {
+					case let .text(text):
+						return text
+					case let .input_text(text):
+						return text
+					case let .input_audio(audio):
+						return audio.transcript
+					case let .audio(audio):
+						return audio.transcript
+				}
+			}
+
 			private enum CodingKeys: String, CodingKey {
 				case type
 				case text

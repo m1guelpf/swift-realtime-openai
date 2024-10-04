@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-	name: "OpenAI",
+	name: OpenAIRealTime",
 	platforms: [
 		.iOS(.v17),
 		.tvOS(.v17),
@@ -13,9 +13,9 @@ let package = Package(
 		.macCatalyst(.v17),
 	],
 	products: [
-		.library(name: "OpenAI", targets: ["OpenAI"]),
+		.library(name: "OpenAIRealTime", targets: ["OpenAIRealTime"]),
 	],
 	targets: [
-		.target(name: "OpenAI", path: "./src"),
+		.target(name: "OpenAIRealTime", path: "./src"),
 	]
 )

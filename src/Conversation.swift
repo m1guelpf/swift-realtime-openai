@@ -61,6 +61,16 @@ public final class Conversation: Sendable {
 		self.init(client: RealtimeAPI(connectingTo: request))
 	}
 
+	@MainActor public func whenConnected<E>(_ callback: @Sendable () async throws(E) -> Void) async throws(E) {
+		while true {
+			if connected {
+				return try await callback()
+			}
+
+			try? await Task.sleep(for: .milliseconds(500))
+		}
+	}
+
 	/// Make changes to the current session
 	/// Note that this will fail if the session hasn't started yet.
 	public func updateSession(withChanges callback: (inout Session) -> Void) async throws {

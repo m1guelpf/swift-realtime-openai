@@ -77,8 +77,6 @@ public enum Item: Identifiable, Equatable, Sendable {
 		private var type: String = "function_call"
 		/// The status of the item
 		public var status: ItemStatus
-		/// The role associated with the item
-		public var role: ItemRole
 		/// The ID of the function call
 		public var callId: String
 		/// The name of the function being called
@@ -92,14 +90,16 @@ public enum Item: Identifiable, Equatable, Sendable {
 		public var id: String
 		/// The type of the item
 		private var type: String = "function_call_output"
-		/// The status of the item
-		public var status: ItemStatus
-		/// The role associated with the item
-		public var role: ItemRole
 		/// The ID of the function call
 		public var callId: String
 		/// The output of the function call
 		public var output: String
+        
+        public init(id: String, callId: String, output: String) {
+            self.id = id
+            self.callId = callId
+            self.output = output
+        }
 	}
 
 	case message(Message)

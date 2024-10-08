@@ -197,6 +197,13 @@ public struct Session: Codable, Equatable, Sendable {
 		public var description: String
 		/// Parameters of the function in JSON Schema.
 		public var parameters: FunctionParameters
+        
+        public init(type: String, name: String, description: String, parameters: FunctionParameters) {
+            self.type = type
+            self.name = name
+            self.description = description
+            self.parameters = parameters
+        }
 	}
 
 	public enum ToolChoice: Equatable, Sendable {

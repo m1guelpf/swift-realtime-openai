@@ -13,7 +13,7 @@ let package = Package(
 		.macCatalyst(.v17),
 	],
 	products: [
-		.library(name: "OpenAI", targets: ["OpenAI"]),
+		.library(name: "OpenAI", type: .static, targets: ["OpenAI"]),
 	],
 	targets: [
 		.target(name: "OpenAI", path: "./src"),

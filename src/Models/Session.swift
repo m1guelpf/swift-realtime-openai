@@ -7,10 +7,12 @@ public struct Session: Codable, Equatable, Sendable {
 	public enum Voice: String, Codable, Sendable {
 		case alloy
 		case echo
-		case fable
-		case onyx
-		case nova
 		case shimmer
+		case ash
+		case ballad
+		case coral
+		case sage
+		case verse
 	}
 
 	public enum AudioFormat: String, Codable, Sendable {

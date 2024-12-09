@@ -61,18 +61,25 @@ public final class Conversation: Sendable {
 		self.init(client: RealtimeAPI(connectingTo: request))
 	}
 
-	@MainActor public func whenConnected<E>(_ callback: @Sendable () async throws(E) -> Void) async throws(E) {
+	/// Wait for the connection to be established
+	@MainActor public func waitForConnection() async {
 		while true {
 			if connected {
-				return try await callback()
+				return
 			}
 
 			try? await Task.sleep(for: .milliseconds(500))
 		}
 	}
 
+	/// Execute a block of code when the connection is established
+	@MainActor public func whenConnected<E>(_ callback: @Sendable () async throws(E) -> Void) async throws(E) {
+		await waitForConnection()
+		try await callback()
+	}
+
 	/// Make changes to the current session
-	/// Note that this will fail if the session hasn't started yet.
+	/// Note that this will fail if the session hasn't started yet. Use `whenConnected` to ensure the session is ready.
 	public func updateSession(withChanges callback: (inout Session) -> Void) async throws {
 		guard var session = await session else {
 			throw ConversationError.sessionNotFound
@@ -80,10 +87,11 @@ public final class Conversation: Sendable {
 
 		callback(&session)
 
-		try await updateSession(session)
+		try await setSession(session)
 	}
 
-	public func updateSession(_ session: Session) async throws {
+	/// Set the configuration of the current session
+	public func setSession(_ session: Session) async throws {
 		// update endpoint errors if we include the session id
 		var session = session
 		session.id = nil
@@ -91,6 +99,7 @@ public final class Conversation: Sendable {
 		try await client.send(event: .updateSession(session))
 	}
 
+	/// Send a client event to the server
 	public func send(event: ClientEvent) async throws {
 		try await client.send(event: event)
 	}

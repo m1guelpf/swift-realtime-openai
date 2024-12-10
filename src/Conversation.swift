@@ -1,7 +1,9 @@
 import Foundation
+@preconcurrency import AVFoundation
 
 public enum ConversationError: Error {
 	case sessionNotFound
+	case converterInitializationFailed
 }
 
 @Observable
@@ -10,11 +12,23 @@ public final class Conversation: Sendable {
 	@MainActor private var cancelTask: (() -> Void)?
 	private let errorStream: AsyncStream<ServerError>.Continuation
 
+	private let audioEngine = AVAudioEngine()
+	private let playerNode = AVAudioPlayerNode()
+	private let apiConverter = UnsafeInteriorMutable<AVAudioConverter>()
+	private let userConverter = UnsafeInteriorMutable<AVAudioConverter>()
+	private let desiredFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 24000, channels: 1, interleaved: false)!
+
 	public let errors: AsyncStream<ServerError>
 	@MainActor public private(set) var id: String?
 	@MainActor public private(set) var session: Session?
 	@MainActor public private(set) var entries: [Item] = []
 	@MainActor public private(set) var connected: Bool = false
+	@MainActor public private(set) var isListening: Bool = false
+	@MainActor public private(set) var handlingVoice: Bool = false
+
+	public var isPlaying: Bool {
+		playerNode.isPlaying
+	}
 
 	private init(client: RealtimeAPI) {
 		self.client = client
@@ -50,10 +64,11 @@ public final class Conversation: Sendable {
 
 		DispatchQueue.main.asyncAndWait {
 			cancelTask?()
+			stopHandlingVoice()
 		}
 	}
 
-	public convenience init(authToken token: String, model: String = "gpt-4o-realtime-preview-2024-10-01") {
+	public convenience init(authToken token: String, model: String = "gpt-4o-realtime-preview") {
 		self.init(client: RealtimeAPI(authToken: token, model: model))
 	}
 
@@ -123,6 +138,75 @@ public final class Conversation: Sendable {
 	}
 }
 
+/// Listening/Speaking public API
+public extension Conversation {
+	@MainActor func toggleListening() throws {
+		isListening ? stopListening() : try startListening()
+	}
+
+	@MainActor func startListening() throws {
+		guard !isListening else { return }
+		if !handlingVoice { try startHandlingVoice() }
+
+		Task.detached {
+			self.audioEngine.inputNode.installTap(onBus: 0, bufferSize: 4096, format: self.audioEngine.inputNode.outputFormat(forBus: 0)) { [weak self] buffer, _ in
+				self?.processAudioBufferFromUser(buffer: buffer)
+			}
+		}
+
+		isListening = true
+	}
+
+	@MainActor func stopListening() {
+		guard isListening else { return }
+
+		audioEngine.inputNode.removeTap(onBus: 0)
+		isListening = false
+	}
+
+	@MainActor func startHandlingVoice() throws {
+		guard !handlingVoice else { return }
+
+		guard let converter = AVAudioConverter(from: audioEngine.inputNode.outputFormat(forBus: 0), to: desiredFormat) else {
+			throw ConversationError.converterInitializationFailed
+		}
+		userConverter.set(converter)
+
+		let audioSession = AVAudioSession.sharedInstance()
+		try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
+		try audioSession.setActive(true)
+
+		audioEngine.attach(playerNode)
+		audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: converter.inputFormat)
+		try audioEngine.inputNode.setVoiceProcessingEnabled(true)
+
+		audioEngine.prepare()
+		do {
+			try audioEngine.start()
+			handlingVoice = true
+		} catch {
+			print("Failed to enable audio engine: \(error)")
+			audioEngine.disconnectNodeInput(playerNode)
+			audioEngine.disconnectNodeOutput(playerNode)
+
+			throw error
+		}
+	}
+
+	@MainActor func stopHandlingVoice() {
+		guard handlingVoice else { return }
+
+		audioEngine.inputNode.removeTap(onBus: 0)
+		audioEngine.stop()
+		audioEngine.disconnectNodeInput(playerNode)
+		audioEngine.disconnectNodeOutput(playerNode)
+
+		isListening = false
+		handlingVoice = false
+	}
+}
+
+/// Event handling private API
 private extension Conversation {
 	@MainActor func handleEvent(_ event: ServerEvent) {
 		switch event {
@@ -183,6 +267,12 @@ private extension Conversation {
 
 					message.content[event.contentIndex] = .audio(.init(audio: audio.audio + event.delta, transcript: audio.transcript))
 				}
+			case let .responseAudioDone(event):
+				updateEvent(id: event.itemId) { message in
+					guard handlingVoice, case let .audio(audio) = message.content[event.contentIndex] else { return }
+
+					playCompletedAudio(audio.audio)
+				}
 			case let .responseFunctionCallArgumentsDelta(event):
 				updateEvent(id: event.itemId) { functionCall in
 					functionCall.arguments.append(event.delta)
@@ -216,5 +306,80 @@ private extension Conversation {
 		closure(&functionCall)
 
 		entries[index] = .functionCall(functionCall)
+	}
+}
+
+/// Audio processing private API
+private extension Conversation {
+	private func playCompletedAudio(_ audio: Data) {
+		guard let buffer = AVAudioPCMBuffer.fromData(audio, format: desiredFormat) else {
+			print("Failed to create audio buffer.")
+			return
+		}
+
+		guard let converter = apiConverter.lazy({ AVAudioConverter(from: buffer.format, to: audioEngine.outputNode.outputFormat(forBus: 0)) }) else {
+			print("Failed to create audio converter.")
+			return
+		}
+
+		let outputFrameCapacity = AVAudioFrameCount(ceil(converter.outputFormat.sampleRate / buffer.format.sampleRate) * Double(buffer.frameLength))
+
+		guard let audio = convertBuffer(buffer: buffer, using: apiConverter.get()!, capacity: outputFrameCapacity) else {
+			print("Failed to convert buffer.")
+			return
+		}
+
+		playerNode.scheduleBuffer(audio, at: nil, options: .interrupts)
+		playerNode.play()
+	}
+
+	private func processAudioBufferFromUser(buffer: AVAudioPCMBuffer) {
+		let ratio = desiredFormat.sampleRate / buffer.format.sampleRate
+
+		guard let convertedBuffer = convertBuffer(buffer: buffer, using: userConverter.get()!, capacity: AVAudioFrameCount(Double(buffer.frameLength) * ratio)) else {
+			print("Buffer conversion failed.")
+			return
+		}
+
+		guard let sampleBytes = convertedBuffer.audioBufferList.pointee.mBuffers.mData else { return }
+		let audioData = Data(bytes: sampleBytes, count: Int(convertedBuffer.audioBufferList.pointee.mBuffers.mDataByteSize))
+
+		Task {
+			try await send(audioDelta: audioData)
+		}
+	}
+
+	private func convertBuffer(buffer: AVAudioPCMBuffer, using converter: AVAudioConverter, capacity: AVAudioFrameCount) -> AVAudioPCMBuffer? {
+		if buffer.format == converter.outputFormat {
+			return buffer
+		}
+
+		guard let convertedBuffer = AVAudioPCMBuffer(pcmFormat: converter.outputFormat, frameCapacity: capacity) else {
+			print("Failed to create converted audio buffer.")
+			return nil
+		}
+
+		var error: NSError?
+		var allSamplesReceived = false
+
+		let status = converter.convert(to: convertedBuffer, error: &error) { _, outStatus in
+			if allSamplesReceived {
+				outStatus.pointee = .noDataNow
+				return nil
+			}
+
+			allSamplesReceived = true
+			outStatus.pointee = .haveData
+			return buffer
+		}
+
+		if status == .error {
+			if let error = error {
+				print("Error during conversion: \(error.localizedDescription)")
+			}
+			return nil
+		}
+
+		return convertedBuffer
 	}
 }

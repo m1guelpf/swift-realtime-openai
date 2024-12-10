@@ -33,7 +33,7 @@ public final class RealtimeAPI: NSObject, Sendable {
 		task.resume()
 	}
 
-	public convenience init(authToken: String, model: String = "gpt-4o-realtime-preview-2024-10-01") {
+	public convenience init(authToken: String, model: String = "gpt-4o-realtime-preview") {
 		var request = URLRequest(url: URL(string: "wss://api.openai.com/v1/realtime")!.appending(queryItems: [
 			URLQueryItem(name: "model", value: model),
 		]))

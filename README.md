@@ -32,7 +32,7 @@ dependencies: [
 
 ## Getting started 🚀
 
-You can build an iMessage-like UI with built-in AI chat in less than 60 lines of code (UI included!):
+You can build an iMessage-like app with built-in AI chat in less than 60 lines of code (UI included!):
 
 ```swift
 import OpenAI
@@ -84,6 +84,7 @@ struct ContentView: View {
 		}
 		.navigationTitle("Chat")
 		.navigationBarTitleDisplayMode(.inline)
+		.onAppear { try! conversation.startHandlingVoice() }
 	}
 
 	func sendMessage() {
@@ -97,11 +98,29 @@ struct ContentView: View {
 }
 ```
 
+Or, if you just want a simple app that lets the user talk and the AI respond:
+
+```swift
+import OpenAI
+import SwiftUI
+
+struct ContentView: View {
+	@State private var conversation = Conversation(authToken: OPENAI_KEY)
+
+	var body: some View {
+		Text("Say something!")
+			.onAppear { try! conversation.startListening() }
+	}
+}
+```
+
 ## Features
 
 -   [x] A simple interface for directly interacting with the API
 -   [x] Wrap the API in an interface that manages the conversation for you
--   [ ] Handle recording the mic and playing model responses for you
+-   [x] Handle recording the mic and playing model responses for you
+-   [ ] Handle playing model responses as they stream in
+-   [ ] Handle interrupting the model
 
 ## Architecture
 

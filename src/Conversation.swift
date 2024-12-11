@@ -206,6 +206,8 @@ public extension Conversation {
 		audioEngine.disconnectNodeInput(playerNode)
 		audioEngine.disconnectNodeOutput(playerNode)
 
+		try? AVAudioSession.sharedInstance().setActive(false)
+
 		isListening = false
 		handlingVoice = false
 	}
@@ -270,7 +272,7 @@ private extension Conversation {
 				updateEvent(id: event.itemId) { message in
 					guard case let .audio(audio) = message.content[event.contentIndex] else { return }
 
-					if handlingVoice { queueAudioSample(event.delta) }
+					if handlingVoice { queueAudioSample(event) }
 					message.content[event.contentIndex] = .audio(.init(audio: audio.audio + event.delta, transcript: audio.transcript))
 				}
 			case let .responseFunctionCallArgumentsDelta(event):
@@ -316,20 +318,20 @@ private extension Conversation {
 
 /// Audio processing private API
 private extension Conversation {
-	private func queueAudioSample(_ sample: Data) {
-		guard let buffer = AVAudioPCMBuffer.fromData(sample, format: desiredFormat) else {
+	private func queueAudioSample(_ event: ServerEvent.ResponseAudioDeltaEvent) {
+		guard let buffer = AVAudioPCMBuffer.fromData(event.delta, format: desiredFormat) else {
 			print("Failed to create audio buffer.")
 			return
 		}
 
-		guard let converter = apiConverter.lazy({ AVAudioConverter(from: buffer.format, to: audioEngine.outputNode.outputFormat(forBus: 0)) }) else {
+		guard let converter = apiConverter.lazy({ AVAudioConverter(from: buffer.format, to: playerNode.outputFormat(forBus: 0)) }) else {
 			print("Failed to create audio converter.")
 			return
 		}
 
 		let outputFrameCapacity = AVAudioFrameCount(ceil(converter.outputFormat.sampleRate / buffer.format.sampleRate) * Double(buffer.frameLength))
 
-		guard let sample = convertBuffer(buffer: buffer, using: apiConverter.get()!, capacity: outputFrameCapacity) else {
+		guard let sample = convertBuffer(buffer: buffer, using: converter, capacity: outputFrameCapacity) else {
 			print("Failed to convert buffer.")
 			return
 		}

@@ -120,8 +120,10 @@ public final class Conversation: Sendable {
 		try await client.send(event: event)
 	}
 
-	/// Append audio bytes to the conversation.
+	/// Manually append audio bytes to the conversation.
 	/// Commit the audio to trigger a model response when server turn detection is disabled.
+	/// > Note: The `Conversation` class can automatically handle listening to the user's mic and playing back model responses.
+	/// > To get started, call the `startListening` function.
 	public func send(audioDelta audio: Data, commit: Bool = false) async throws {
 		try await send(event: .appendInputAudioBuffer(encoding: audio))
 		if commit { try await send(event: .commitInputAudioBuffer()) }
@@ -129,6 +131,8 @@ public final class Conversation: Sendable {
 
 	/// Send a text message and wait for a response
 	public func send(from role: Item.ItemRole, text: String, response: Response.Config? = nil) async throws {
+		if await handlingVoice { stopPlayingAudio() }
+
 		try await send(event: .createConversationItem(Item(message: Item.Message(id: String(randomLength: 32), from: role, content: [.input_text(text)]))))
 		try await send(event: .createResponse(response))
 	}
@@ -279,6 +283,7 @@ private extension Conversation {
 				}
 			case let .inputAudioBufferSpeechStarted(event):
 				isUserSpeaking = true
+				if handlingVoice { stopPlayingAudio() }
 			case let .inputAudioBufferSpeechStopped(event):
 				isUserSpeaking = false
 			default:
@@ -331,6 +336,15 @@ private extension Conversation {
 
 		playerNode.scheduleBuffer(sample, at: nil)
 		playerNode.play()
+	}
+
+	private func stopPlayingAudio() {
+		if playerNode.isPlaying {
+			// TODO: Let the server know where the user interrupted the audio
+			// client.send(event: .truncateConversationItem(for: , at: 0, atAudio: ))
+		}
+
+		playerNode.stop()
 	}
 
 	private func processAudioBufferFromUser(buffer: AVAudioPCMBuffer) {

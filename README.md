@@ -6,7 +6,7 @@
 
 This library provides a simple interface for implementing multi-modal conversations using OpenAI's new Realtime API.
 
-It also gives you a transparent layer over the API for advanced use cases, and will soon include another layer that automatically handles recording the user's microphone and playing back the assistant's response.
+It can handle automatically recording the user's microphone and playing back the assistant's response, and also gives you a transparent layer over the API for advanced use cases.
 
 ## Installation
 
@@ -118,9 +118,9 @@ struct ContentView: View {
 
 -   [x] A simple interface for directly interacting with the API
 -   [x] Wrap the API in an interface that manages the conversation for you
--   [x] Handle recording the mic and playing model responses for you
--   [x] Handle playing model responses as they stream in
--   [ ] Handle interrupting the model
+-   [x] Optionally handle recording the user's mic and sending it to the API
+-   [x] Optionally handle playing model responses as they stream in
+-   [x] Allow interrupting the model
 
 ## Architecture
 

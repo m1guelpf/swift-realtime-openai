@@ -25,6 +25,7 @@ public final class Conversation: Sendable {
 	@MainActor public private(set) var connected: Bool = false
 	@MainActor public private(set) var isListening: Bool = false
 	@MainActor public private(set) var handlingVoice: Bool = false
+	@MainActor public private(set) var isUserSpeaking: Bool = false
 
 	public var isPlaying: Bool {
 		playerNode.isPlaying
@@ -281,6 +282,10 @@ private extension Conversation {
 				updateEvent(id: event.itemId) { functionCall in
 					functionCall.arguments = event.arguments
 				}
+			case let .inputAudioBufferSpeechStarted(event):
+				isUserSpeaking = true
+			case let .inputAudioBufferSpeechStopped(event):
+				isUserSpeaking = false
 			default:
 				return
 		}

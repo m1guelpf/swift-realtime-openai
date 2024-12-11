@@ -266,13 +266,8 @@ private extension Conversation {
 				updateEvent(id: event.itemId) { message in
 					guard case let .audio(audio) = message.content[event.contentIndex] else { return }
 
+					if handlingVoice { queueAudioSample(event.delta) }
 					message.content[event.contentIndex] = .audio(.init(audio: audio.audio + event.delta, transcript: audio.transcript))
-				}
-			case let .responseAudioDone(event):
-				updateEvent(id: event.itemId) { message in
-					guard handlingVoice, case let .audio(audio) = message.content[event.contentIndex] else { return }
-
-					playCompletedAudio(audio.audio)
 				}
 			case let .responseFunctionCallArgumentsDelta(event):
 				updateEvent(id: event.itemId) { functionCall in
@@ -316,8 +311,8 @@ private extension Conversation {
 
 /// Audio processing private API
 private extension Conversation {
-	private func playCompletedAudio(_ audio: Data) {
-		guard let buffer = AVAudioPCMBuffer.fromData(audio, format: desiredFormat) else {
+	private func queueAudioSample(_ sample: Data) {
+		guard let buffer = AVAudioPCMBuffer.fromData(sample, format: desiredFormat) else {
 			print("Failed to create audio buffer.")
 			return
 		}
@@ -329,12 +324,12 @@ private extension Conversation {
 
 		let outputFrameCapacity = AVAudioFrameCount(ceil(converter.outputFormat.sampleRate / buffer.format.sampleRate) * Double(buffer.frameLength))
 
-		guard let audio = convertBuffer(buffer: buffer, using: apiConverter.get()!, capacity: outputFrameCapacity) else {
+		guard let sample = convertBuffer(buffer: buffer, using: apiConverter.get()!, capacity: outputFrameCapacity) else {
 			print("Failed to convert buffer.")
 			return
 		}
 
-		playerNode.scheduleBuffer(audio, at: nil, options: .interrupts)
+		playerNode.scheduleBuffer(sample, at: nil)
 		playerNode.play()
 	}
 

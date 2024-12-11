@@ -14,6 +14,7 @@ public final class Conversation: Sendable {
 
 	private let audioEngine = AVAudioEngine()
 	private let playerNode = AVAudioPlayerNode()
+	private let queuedSamples = UnsafeMutableArray<String>()
 	private let apiConverter = UnsafeInteriorMutable<AVAudioConverter>()
 	private let userConverter = UnsafeInteriorMutable<AVAudioConverter>()
 	private let desiredFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 24000, channels: 1, interleaved: false)!
@@ -28,7 +29,7 @@ public final class Conversation: Sendable {
 	@MainActor public private(set) var isUserSpeaking: Bool = false
 
 	public var isPlaying: Bool {
-		playerNode.isPlaying
+		!queuedSamples.isEmpty
 	}
 
 	private init(client: RealtimeAPI) {
@@ -336,14 +337,29 @@ private extension Conversation {
 			return
 		}
 
-		playerNode.scheduleBuffer(sample, at: nil)
+		queuedSamples.push(event.itemId)
+
+		playerNode.scheduleBuffer(sample, at: nil, completionCallbackType: .dataPlayedBack) { [weak self] _ in
+			guard let self else { return }
+
+			self.queuedSamples.popFirst()
+			if self.queuedSamples.isEmpty { playerNode.pause() }
+		}
+
 		playerNode.play()
 	}
 
 	private func stopPlayingAudio() {
-		if playerNode.isPlaying {
-			// TODO: Let the server know where the user interrupted the audio
-			// client.send(event: .truncateConversationItem(for: , at: 0, atAudio: ))
+		if isPlaying, let nodeTime = playerNode.lastRenderTime, let playerTime = playerNode.playerTime(forNodeTime: nodeTime), let itemID = queuedSamples.first {
+			let audioTimeInMiliseconds = Int((Double(playerTime.sampleTime) / playerTime.sampleRate) * 1000)
+
+			Task {
+				do {
+					try await client.send(event: .truncateConversationItem(forItem: itemID, atAudioMs: audioTimeInMiliseconds))
+				} catch {
+					print("Failed to send automatic truncation event: \(error)")
+				}
+			}
 		}
 
 		playerNode.stop()

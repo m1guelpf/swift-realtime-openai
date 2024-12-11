@@ -127,8 +127,8 @@ public extension ClientEvent {
 		.createConversationItem(ConversationItemCreateEvent(eventId: id, previousItemId: previousID, item: item))
 	}
 
-	static func truncateConversationItem(id eventId: String? = nil, for id: String? = nil, at index: Int, atAudio audioIndex: Int) -> Self {
-		.truncateConversationItem(ConversationItemTruncateEvent(eventId: eventId, itemId: id, contentIndex: index, audioEndMs: audioIndex))
+	static func truncateConversationItem(id eventId: String? = nil, forItem itemId: String, at index: Int = 0, atAudioMs audioMs: Int) -> Self {
+		.truncateConversationItem(ConversationItemTruncateEvent(eventId: eventId, itemId: itemId, contentIndex: index, audioEndMs: audioMs))
 	}
 
 	static func deleteConversationItem(id eventId: String? = nil, for id: String? = nil, at index: Int, atAudio audioIndex: Int) -> Self {

@@ -119,7 +119,7 @@ struct ContentView: View {
 -   [x] A simple interface for directly interacting with the API
 -   [x] Wrap the API in an interface that manages the conversation for you
 -   [x] Handle recording the mic and playing model responses for you
--   [ ] Handle playing model responses as they stream in
+-   [x] Handle playing model responses as they stream in
 -   [ ] Handle interrupting the model
 
 ## Architecture

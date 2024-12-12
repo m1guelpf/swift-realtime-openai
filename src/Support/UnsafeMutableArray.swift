@@ -19,4 +19,8 @@ import Foundation
 	func popFirst() -> T? {
 		array.removeFirst()
 	}
+
+	func clear() {
+		array.removeAll()
+	}
 }

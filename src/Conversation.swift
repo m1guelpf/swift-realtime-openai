@@ -19,15 +19,33 @@ public final class Conversation: Sendable {
 	private let userConverter = UnsafeInteriorMutable<AVAudioConverter>()
 	private let desiredFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 24000, channels: 1, interleaved: false)!
 
+	/// A stream of errors that occur during the conversation.
 	public let errors: AsyncStream<ServerError>
+
+	/// The unique ID of the conversation.
 	@MainActor public private(set) var id: String?
+
+	/// The current session for this conversation.
 	@MainActor public private(set) var session: Session?
+
+	/// A list of items in the conversation.
 	@MainActor public private(set) var entries: [Item] = []
+
+	/// Whether the conversation is currently connected to the server.
 	@MainActor public private(set) var connected: Bool = false
+
+	/// Whether the conversation is currently listening to the user's microphone.
 	@MainActor public private(set) var isListening: Bool = false
+
+	/// Whether this conversation is currently handling voice input and output.
 	@MainActor public private(set) var handlingVoice: Bool = false
+
+	/// Whether the user is currently speaking.
+	/// This only works when using the server's voice detection.
 	@MainActor public private(set) var isUserSpeaking: Bool = false
 
+	/// A list of messages in the conversation.
+	/// Note that this doesn't include function call events. To get a complete list, use `entries`.
 	@MainActor public var messages: [Item.Message] {
 		entries.compactMap { switch $0 {
 			case let .message(message): return message
@@ -35,6 +53,7 @@ public final class Conversation: Sendable {
 		} }
 	}
 
+	/// Whether the model is currently speaking.
 	public var isPlaying: Bool {
 		!queuedSamples.isEmpty
 	}
@@ -77,10 +96,12 @@ public final class Conversation: Sendable {
 		}
 	}
 
+	/// Create a new conversation providing an API token and, optionally, a model.
 	public convenience init(authToken token: String, model: String = "gpt-4o-realtime-preview") {
 		self.init(client: RealtimeAPI(authToken: token, model: model))
 	}
 
+	/// Create a new conversation that connects using a custom `URLRequest`.
 	public convenience init(connectingTo request: URLRequest) {
 		self.init(client: RealtimeAPI(connectingTo: request))
 	}
@@ -123,7 +144,8 @@ public final class Conversation: Sendable {
 		try await client.send(event: .updateSession(session))
 	}
 
-	/// Send a client event to the server
+	/// Send a client event to the server.
+	/// > Warning: This function is intended for advanced use cases. Use the other functions to send messages and audio data.
 	public func send(event: ClientEvent) async throws {
 		try await client.send(event: event)
 	}
@@ -137,15 +159,17 @@ public final class Conversation: Sendable {
 		if commit { try await send(event: .commitInputAudioBuffer()) }
 	}
 
-	/// Send a text message and wait for a response
+	/// Send a text message and wait for a response.
+	/// Optionally, you can provide a response configuration to customize the model's behavior.
+	/// > Note: Calling this function will automatically call `interruptSpeech` if the model is currently speaking.
 	public func send(from role: Item.ItemRole, text: String, response: Response.Config? = nil) async throws {
-		if await handlingVoice { stopPlayingAudio() }
+		if await handlingVoice { interruptSpeech() }
 
 		try await send(event: .createConversationItem(Item(message: Item.Message(id: String(randomLength: 32), from: role, content: [.input_text(text)]))))
 		try await send(event: .createResponse(response))
 	}
 
-	/// Send the response of a function call
+	/// Send the response of a function call.
 	public func send(result output: Item.FunctionCallOutput) async throws {
 		try await send(event: .createConversationItem(Item(with: output)))
 	}
@@ -153,10 +177,9 @@ public final class Conversation: Sendable {
 
 /// Listening/Speaking public API
 public extension Conversation {
-	@MainActor func toggleListening() throws {
-		isListening ? stopListening() : try startListening()
-	}
-
+	/// Start listening to the user's microphone and sending audio data to the model.
+	/// This will automatically call `startHandlingVoice` if it hasn't been called yet.
+	/// > Warning: Make sure to handle the case where the user denies microphone access.
 	@MainActor func startListening() throws {
 		guard !isListening else { return }
 		if !handlingVoice { try startHandlingVoice() }
@@ -170,6 +193,8 @@ public extension Conversation {
 		isListening = true
 	}
 
+	/// Stop listening to the user's microphone.
+	/// This won't stop playing back model responses. To fully stop handling voice conversations, call `stopHandlingVoice`.
 	@MainActor func stopListening() {
 		guard isListening else { return }
 
@@ -177,6 +202,7 @@ public extension Conversation {
 		isListening = false
 	}
 
+	/// Handle the playback of audio responses from the model.
 	@MainActor func startHandlingVoice() throws {
 		guard !handlingVoice else { return }
 
@@ -206,6 +232,30 @@ public extension Conversation {
 		}
 	}
 
+	/// Interrupt the model's response if it's currently playing.
+	/// This lets the model know that the user didn't hear the full response.
+	func interruptSpeech() {
+		if isPlaying,
+		   let nodeTime = playerNode.lastRenderTime,
+		   let playerTime = playerNode.playerTime(forNodeTime: nodeTime),
+		   let itemID = queuedSamples.first
+		{
+			let audioTimeInMiliseconds = Int((Double(playerTime.sampleTime) / playerTime.sampleRate) * 1000)
+
+			Task {
+				do {
+					try await client.send(event: .truncateConversationItem(forItem: itemID, atAudioMs: audioTimeInMiliseconds))
+				} catch {
+					print("Failed to send automatic truncation event: \(error)")
+				}
+			}
+		}
+
+		playerNode.stop()
+		queuedSamples.clear()
+	}
+
+	/// Stop playing audio responses from the model and listening to the user's microphone.
 	@MainActor func stopHandlingVoice() {
 		guard handlingVoice else { return }
 
@@ -354,22 +404,6 @@ private extension Conversation {
 		}
 
 		playerNode.play()
-	}
-
-	private func stopPlayingAudio() {
-		if isPlaying, let nodeTime = playerNode.lastRenderTime, let playerTime = playerNode.playerTime(forNodeTime: nodeTime), let itemID = queuedSamples.first {
-			let audioTimeInMiliseconds = Int((Double(playerTime.sampleTime) / playerTime.sampleRate) * 1000)
-
-			Task {
-				do {
-					try await client.send(event: .truncateConversationItem(forItem: itemID, atAudioMs: audioTimeInMiliseconds))
-				} catch {
-					print("Failed to send automatic truncation event: \(error)")
-				}
-			}
-		}
-
-		playerNode.stop()
 	}
 
 	private func processAudioBufferFromUser(buffer: AVAudioPCMBuffer) {

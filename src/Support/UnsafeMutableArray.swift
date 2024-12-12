@@ -15,6 +15,7 @@ import Foundation
 		array.append(value)
 	}
 
+	@discardableResult
 	func popFirst() -> T? {
 		array.removeFirst()
 	}

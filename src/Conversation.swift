@@ -291,10 +291,10 @@ private extension Conversation {
 				updateEvent(id: event.itemId) { functionCall in
 					functionCall.arguments = event.arguments
 				}
-			case let .inputAudioBufferSpeechStarted(event):
+			case .inputAudioBufferSpeechStarted:
 				isUserSpeaking = true
 				if handlingVoice { stopPlayingAudio() }
-			case let .inputAudioBufferSpeechStopped(event):
+			case .inputAudioBufferSpeechStopped:
 				isUserSpeaking = false
 			default:
 				return

@@ -44,6 +44,9 @@ public final class Conversation: Sendable {
 	/// This only works when using the server's voice detection.
 	@MainActor public private(set) var isUserSpeaking: Bool = false
 
+	/// Whether the model is currently speaking.
+	@MainActor public private(set) var isPlaying: Bool = false
+
 	/// A list of messages in the conversation.
 	/// Note that this doesn't include function call events. To get a complete list, use `entries`.
 	@MainActor public var messages: [Item.Message] {
@@ -51,11 +54,6 @@ public final class Conversation: Sendable {
 			case let .message(message): return message
 			default: return nil
 		} }
-	}
-
-	/// Whether the model is currently speaking.
-	public var isPlaying: Bool {
-		!queuedSamples.isEmpty
 	}
 
 	private init(client: RealtimeAPI) {
@@ -84,6 +82,8 @@ public final class Conversation: Sendable {
 					self.connected = false
 				}
 			}
+
+			_keepIsPlayingPropertyUpdated()
 		}
 	}
 
@@ -163,7 +163,7 @@ public final class Conversation: Sendable {
 	/// Optionally, you can provide a response configuration to customize the model's behavior.
 	/// > Note: Calling this function will automatically call `interruptSpeech` if the model is currently speaking.
 	public func send(from role: Item.ItemRole, text: String, response: Response.Config? = nil) async throws {
-		if await handlingVoice { interruptSpeech() }
+		if await handlingVoice { await interruptSpeech() }
 
 		try await send(event: .createConversationItem(Item(message: Item.Message(id: String(randomLength: 32), from: role, content: [.input_text(text)]))))
 		try await send(event: .createResponse(response))
@@ -234,7 +234,7 @@ public extension Conversation {
 
 	/// Interrupt the model's response if it's currently playing.
 	/// This lets the model know that the user didn't hear the full response.
-	func interruptSpeech() {
+	@MainActor func interruptSpeech() {
 		if isPlaying,
 		   let nodeTime = playerNode.lastRenderTime,
 		   let playerTime = playerNode.playerTime(forNodeTime: nodeTime),
@@ -454,5 +454,21 @@ private extension Conversation {
 		}
 
 		return convertedBuffer
+	}
+}
+
+// Other private methods
+extension Conversation {
+	/// This hack is required because relying on `queuedSamples.isEmpty` directly crashes the app.
+	/// This is because updating the `queuedSamples` array on a background thread will trigger a re-render of any views that depend on it on that thread.
+	/// So, instead, we observe the property and update `isPlaying` on the main actor.
+	private func _keepIsPlayingPropertyUpdated() {
+		withObservationTracking { _ = queuedSamples.isEmpty } onChange: {
+			Task { @MainActor in
+				self.isPlaying = self.queuedSamples.isEmpty
+			}
+
+			self._keepIsPlayingPropertyUpdated()
+		}
 	}
 }

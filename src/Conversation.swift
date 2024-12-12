@@ -343,7 +343,7 @@ private extension Conversation {
 				}
 			case .inputAudioBufferSpeechStarted:
 				isUserSpeaking = true
-				if handlingVoice { stopPlayingAudio() }
+				if handlingVoice { interruptSpeech() }
 			case .inputAudioBufferSpeechStopped:
 				isUserSpeaking = false
 			default:

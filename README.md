@@ -124,7 +124,64 @@ struct ContentView: View {
 
 ## Architecture
 
-### RealtimeAPI
+### `Conversation`
+
+The `Conversation` class provides a high-level interface for managing a conversation with the model. It wraps the `RealtimeAPI` class and handles the details of sending and receiving messages, as well as managing the conversation history. It can optionally also handle recording the user's mic and sending it to the API, as well as playing model responses as they stream in.
+
+#### Reading messages
+
+You can access the messages in the conversation through the `messages` property. Note that this won't include function calls and its responses, only the messages between the user and the model. To access the full conversation history, use the `entries` property. For example:
+
+```swift
+ScrollView {
+    ScrollViewReader { scrollView in
+        VStack(spacing: 12) {
+            ForEach(conversation.messages, id: \.id) { message in
+                MessageBubble(message: message).id(message.id)
+            }
+        }
+        .onReceive(conversation.messages.publisher) { _ in
+            withAnimation { scrollView.scrollTo(conversation.messages.last?.id, anchor: .center) }
+        }
+    }
+}
+```
+
+#### Customizing the session
+
+You can customize the current session using the `setSession(_: Session)` or `updateSession(withChanges: (inout Session) -> Void)` methods. Note that they requires that a session has already been established, so it's recommended you call them from a `whenConnected(_: @Sendable () async throws -> Void)` callback or await `waitForConnection()` first. For example:
+
+```swift
+try await conversation.whenConnected {
+    try await conversation.updateSession { session in
+        // update system prompt
+        session.instructions = "You are a helpful assistant."
+
+        // enable transcription of users' voice messages
+        session.inputAudioTranscription = Session.InputAudioTranscription()
+
+        // ...
+    }
+}
+```
+
+#### Handling voice conversations
+
+The `Conversation` class can automatically handle 2-way voice conversations. Calling `startListening()` will start listening to the user's voice and sending it to the model, and playing back the model's responses. Calling `stopListening()` will stop listening, but continue playing back responses.
+
+If you just want to play model responses, call `startHandlingVoice()`. To stop both listening and playing back responses, call `stopHandlingVoice()`.
+
+#### Manually sending messages
+
+To send a text message, call the `send(from: Item.ItemRole, text: String, response: Response.Config? = nil)` providing the role of the sender (`.user`, `.assistant`, or `.system`) and the contents of the message. You can optionally also provide a `Response.Config` object to customize the response, such as enabling or disabling function calls.
+
+To manually send an audio message (or part of one), call the `send(audioDelta: Data, commit: Bool = false)` with a valid audio chunk. If `commit` is `true`, the model will consider the message finished and begin responding to it. Otherwise, it might wait for more audio depending on your `Session.turnDetection` settings.
+
+#### Manually sending events
+
+To manually send an event to the API, use the `send(event: RealtimeAPI.ClientEvent)` method. Note that this bypasses some of the logic in the `Conversation` class such as handling interrupts, so you should prefer to use other methods whenever possible.
+
+### `RealtimeAPI`
 
 To interact with the API directly, create a new instance of `RealtimeAPI` providing a valid OpenAI API Key. The websocket connection will be automatically established. You can listen for new events through the `events` property, like so:
 

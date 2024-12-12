@@ -28,6 +28,13 @@ public final class Conversation: Sendable {
 	@MainActor public private(set) var handlingVoice: Bool = false
 	@MainActor public private(set) var isUserSpeaking: Bool = false
 
+	@MainActor public var messages: [Item.Message] {
+		entries.compactMap { switch $0 {
+			case let .message(message): return message
+			default: return nil
+		} }
+	}
+
 	public var isPlaying: Bool {
 		!queuedSamples.isEmpty
 	}

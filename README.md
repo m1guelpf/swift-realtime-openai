@@ -121,6 +121,7 @@ struct ContentView: View {
 -   [x] Optionally handle recording the user's mic and sending it to the API
 -   [x] Optionally handle playing model responses as they stream in
 -   [x] Allow interrupting the model
+-   [ ] WebRTC support
 
 ## Architecture
 
@@ -183,7 +184,14 @@ To manually send an event to the API, use the `send(event: RealtimeAPI.ClientEve
 
 ### `RealtimeAPI`
 
-To interact with the API directly, create a new instance of `RealtimeAPI` providing a valid OpenAI API Key. The websocket connection will be automatically established. You can listen for new events through the `events` property, like so:
+To interact with the API directly, create a new instance of `RealtimeAPI` providing one of the available connectors. There are helper methods that let you create an instance from an apiKey or a `URLRequest`, like so:
+
+```swift
+let api = RealtimeAPI.webSocket(authToken: YOUR_OPENAI_API_KEY, model: String = "gpt-4o-realtime-preview") // or RealtimeAPI.webSocket(connectingTo: URLRequest)
+let api = RealtimeAPI.webRTC(authToken: YOUR_OPENAI_API_KEY, model: String = "gpt-4o-realtime-preview") // or RealtimeAPI.webRTC(connectingTo: URLRequest)
+```
+
+You can listen for new events through the `events` property, like so:
 
 ```swift
 for try await event in api.events {

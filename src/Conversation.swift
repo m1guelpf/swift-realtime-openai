@@ -98,12 +98,12 @@ public final class Conversation: Sendable {
 
 	/// Create a new conversation providing an API token and, optionally, a model.
 	public convenience init(authToken token: String, model: String = "gpt-4o-realtime-preview") {
-		self.init(client: RealtimeAPI(authToken: token, model: model))
+		self.init(client: RealtimeAPI.webSocket(authToken: token, model: model))
 	}
 
 	/// Create a new conversation that connects using a custom `URLRequest`.
 	public convenience init(connectingTo request: URLRequest) {
-		self.init(client: RealtimeAPI(connectingTo: request))
+		self.init(client: RealtimeAPI.webSocket(connectingTo: request))
 	}
 
 	/// Wait for the connection to be established

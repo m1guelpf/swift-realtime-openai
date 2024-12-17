@@ -3,91 +3,65 @@ import Foundation
 import FoundationNetworking
 #endif
 
+enum RealtimeAPIError: Error {
+	case invalidMessage
+}
+
 public final class RealtimeAPI: NSObject, Sendable {
-	@MainActor public var onDisconnect: (@Sendable () -> Void)?
-	public let events: AsyncThrowingStream<ServerEvent, Error>
-
-	private let encoder: JSONEncoder = {
-		let encoder = JSONEncoder()
-		encoder.keyEncodingStrategy = .convertToSnakeCase
-		return encoder
-	}()
-
-	private let decoder: JSONDecoder = {
-		let decoder = JSONDecoder()
-		decoder.keyDecodingStrategy = .convertFromSnakeCase
-		return decoder
-	}()
-
-	private let task: URLSessionWebSocketTask
-	private let stream: AsyncThrowingStream<ServerEvent, Error>.Continuation
-
-	public init(connectingTo request: URLRequest) {
-		(events, stream) = AsyncThrowingStream.makeStream(of: ServerEvent.self)
-		task = URLSession.shared.webSocketTask(with: request)
-
-		super.init()
-
-		task.delegate = self
-		receiveMessage()
-		task.resume()
+	@MainActor public var onDisconnect: (@Sendable () -> Void)? {
+		get { connector.onDisconnect }
+		set { connector.onDisconnect(newValue) }
 	}
 
-	public convenience init(authToken: String, model: String = "gpt-4o-realtime-preview") {
+	public var events: AsyncThrowingStream<ServerEvent, Error> {
+		connector.events
+	}
+
+	let connector: any Connector
+
+	/// Connect to the OpenAI Realtime API using the given connector instance.
+	public init(connector: any Connector) {
+		self.connector = connector
+
+		super.init()
+	}
+
+	public func send(event: ClientEvent) async throws {
+		try await connector.send(event: event)
+	}
+}
+
+/// Helper methods for connecting to the OpenAI Realtime API.
+extension RealtimeAPI {
+	/// Connect to the OpenAI WebSocket Realtime API with the given request.
+	static func webSocket(connectingTo request: URLRequest) -> RealtimeAPI {
+		RealtimeAPI(connector: WebSocketConnector(connectingTo: request))
+	}
+
+	/// Connect to the OpenAI WebSocket Realtime API with the given authentication token and model.
+	static func webSocket(authToken: String, model: String = "gpt-4o-realtime-preview") -> RealtimeAPI {
 		var request = URLRequest(url: URL(string: "wss://api.openai.com/v1/realtime")!.appending(queryItems: [
 			URLQueryItem(name: "model", value: model),
 		]))
 		request.addValue("realtime=v1", forHTTPHeaderField: "OpenAI-Beta")
 		request.addValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
 
-		self.init(connectingTo: request)
+		return webSocket(connectingTo: request)
 	}
 
-	deinit {
-		task.cancel(with: .goingAway, reason: nil)
-		stream.finish()
-		onDisconnect?()
+	/// Connect to the OpenAI WebRTC Realtime API with the given request.
+	static func webRTC(connectingTo request: URLRequest) async throws -> RealtimeAPI {
+		try RealtimeAPI(connector: await WebRTCConnector(connectingTo: request))
 	}
 
-	private func receiveMessage() {
-		task.receive { [weak self] result in
-			guard let self else { return }
+	/// Connect to the OpenAI WebRTC Realtime API with the given authentication token and model.
+	static func webRTC(authToken: String, model: String = "gpt-4o-realtime-preview") async throws -> RealtimeAPI {
+		var request = URLRequest(url: URL(string: "wss://api.openai.com/v1/realtime")!.appending(queryItems: [
+			URLQueryItem(name: "model", value: model),
+		]))
 
-			switch result {
-				case let .failure(error):
-					self.stream.yield(error: error)
-				case let .success(message):
-					switch message {
-						case let .string(text):
-							self.stream.yield(with: Result { try self.decoder.decode(ServerEvent.self, from: text.data(using: .utf8)!) })
-
-						case .data:
-							self.stream.yield(error: RealtimeAPIError.invalidMessage)
-
-						@unknown default:
-							self.stream.yield(error: RealtimeAPIError.invalidMessage)
-					}
-			}
-
-			self.receiveMessage()
-		}
+		request.addValue("realtime=v1", forHTTPHeaderField: "OpenAI-Beta")
+		request.addValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+		return try await webRTC(connectingTo: request)
 	}
-
-	public func send(event: ClientEvent) async throws {
-		let message = try URLSessionWebSocketTask.Message.string(String(data: encoder.encode(event), encoding: .utf8)!)
-		try await task.send(message)
-	}
-}
-
-extension RealtimeAPI: URLSessionWebSocketDelegate {
-	public func urlSession(_: URLSession, webSocketTask _: URLSessionWebSocketTask, didCloseWith _: URLSessionWebSocketTask.CloseCode, reason _: Data?) {
-		stream.finish()
-		Task { @MainActor in
-			onDisconnect?()
-		}
-	}
-}
-
-enum RealtimeAPIError: Error {
-	case invalidMessage
 }

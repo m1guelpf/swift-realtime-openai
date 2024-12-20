@@ -43,15 +43,19 @@ public struct Session: Codable, Equatable, Sendable {
 		public var prefixPaddingMs: Int
 		/// Duration of silence to detect speech stop (in milliseconds).
 		public var silenceDurationMs: Int
+		/// Whether or not to automatically generate a response when VAD is enabled.
+		public var createResponse: Bool
 
 		public init(
-			type: TurnDetectionType,
-			threshold: Double,
-			prefixPaddingMs: Int,
-			silenceDurationMs: Int
+			type: TurnDetectionType = .serverVad,
+			threshold: Double = 0.5,
+			prefixPaddingMs: Int = 300,
+			silenceDurationMs: Int = 500,
+			createResponse: Bool = true
 		) {
 			self.type = type
 			self.threshold = threshold
+			self.createResponse = createResponse
 			self.prefixPaddingMs = prefixPaddingMs
 			self.silenceDurationMs = silenceDurationMs
 		}

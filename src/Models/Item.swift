@@ -94,12 +94,12 @@ public enum Item: Identifiable, Equatable, Sendable {
 		public var callId: String
 		/// The output of the function call
 		public var output: String
-        
-        public init(id: String, callId: String, output: String) {
-            self.id = id
-            self.callId = callId
-            self.output = output
-        }
+
+		public init(id: String, callId: String, output: String) {
+			self.id = id
+			self.callId = callId
+			self.output = output
+		}
 	}
 
 	case message(Message)

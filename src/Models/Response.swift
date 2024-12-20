@@ -1,5 +1,12 @@
 public struct Response: Identifiable, Codable, Equatable, Sendable {
 	public struct Config: Codable, Equatable, Sendable {
+		public enum Conversation: String, Codable, Equatable, Sendable {
+			/// The contents of the response will be added to the default conversation.
+			case auto
+			/// An out-of-band response which will not add items to default conversation.
+			case none
+		}
+
 		/// The modalities for the response.
 		public let modalities: [Session.Modality]
 		/// Instructions for the model.
@@ -15,7 +22,27 @@ public struct Response: Identifiable, Codable, Equatable, Sendable {
 		/// Sampling temperature.
 		public let temperature: Double
 		/// Maximum number of output tokens.
-		public let maxOutputTokens: Int?
+		public let maxResponseOutputTokens: Int?
+		/// Controls which conversation the response is added to.
+		public let conversation: Conversation?
+		/// Set of 16 key-value pairs that can be attached to an object. This can be useful for storing additional information about the object in a structured format. Keys can be a maximum of 64 characters long and values can be a maximum of 512 characters long.
+		public let metadata: [String: String]?
+		/// Input items to include in the prompt for the model. Creates a new context for this response, without including the default conversation. Can include references to items from the default conversation.
+		public let input: [Item]?
+
+		public init(modalities: [Session.Modality] = [.text, .audio], instructions: String, voice: Session.Voice = .alloy, outputAudioFormat: Session.AudioFormat = .pcm16, tools: [Session.Tool] = [], toolChoice: Session.ToolChoice = .auto, temperature: Double = 1, maxResponseOutputTokens: Int? = nil, conversation: Conversation? = .auto, metadata: [String: String]? = nil, input: [Item]? = nil) {
+			self.input = input
+			self.voice = voice
+			self.tools = tools
+			self.metadata = metadata
+			self.toolChoice = toolChoice
+			self.modalities = modalities
+			self.temperature = temperature
+			self.instructions = instructions
+			self.conversation = conversation
+			self.outputAudioFormat = outputAudioFormat
+			self.maxResponseOutputTokens = maxResponseOutputTokens
+		}
 	}
 
 	public enum Status: String, Codable, Equatable, Sendable {
@@ -40,4 +67,6 @@ public struct Response: Identifiable, Codable, Equatable, Sendable {
 	public let output: [Item]
 	/// Usage statistics for the response.
 	public let usage: Usage?
+	/// Developer-provided string key-value pairs associated with this response.
+	public let metadata: [String: String]?
 }

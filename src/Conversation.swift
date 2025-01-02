@@ -346,6 +346,12 @@ private extension Conversation {
 				if handlingVoice { interruptSpeech() }
 			case .inputAudioBufferSpeechStopped:
 				isUserSpeaking = false
+            case let .responseOutputItemDone(event):
+                updateEvent(id: event.item.id) { message in
+                    guard case let .message(newMessage) = event.item else { return }
+                    
+                    message = newMessage
+                }
 			default:
 				return
 		}

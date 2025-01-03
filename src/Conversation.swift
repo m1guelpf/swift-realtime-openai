@@ -206,39 +206,34 @@ public extension Conversation {
 	@MainActor func startHandlingVoice() throws {
 		guard !handlingVoice else { return }
 
-		// Set up audio converter
 		guard let converter = AVAudioConverter(from: audioEngine.inputNode.outputFormat(forBus: 0), to: desiredFormat) else {
 			throw ConversationError.converterInitializationFailed
 		}
 		userConverter.set(converter)
 
 		#if os(iOS)
-		// iOS-specific audio configuration
 		let audioSession = AVAudioSession.sharedInstance()
 		try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
 		try audioSession.setActive(true)
 		#endif
 
-		// Attach and connect playerNode to the audio engine
 		audioEngine.attach(playerNode)
 		audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: converter.inputFormat)
 
 		#if os(iOS)
-		// Enable voice processing for iOS
 		try audioEngine.inputNode.setVoiceProcessingEnabled(true)
 		#endif
 
-		// Prepare and start the audio engine
 		audioEngine.prepare()
 		do {
 			try audioEngine.start()
-			print("Audio engine started successfully.")
 			handlingVoice = true
 		} catch {
 			print("Failed to enable audio engine: \(error)")
-			// Disconnect and clean up on failure
+
 			audioEngine.disconnectNodeInput(playerNode)
 			audioEngine.disconnectNodeOutput(playerNode)
+
 			throw error
 		}
 	}
@@ -277,12 +272,10 @@ public extension Conversation {
 
 		#if os(iOS)
 		try? AVAudioSession.sharedInstance().setActive(false)
-		#else
-		// macOS-specific audio engine teardown
+		#elseif os(macOS)
 		if audioEngine.isRunning {
 			audioEngine.stop()
 			audioEngine.reset()
-			print("Audio engine stopped and reset on macOS")
 		}
 		#endif
 

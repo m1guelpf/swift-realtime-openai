@@ -428,7 +428,7 @@ public extension Conversation {
 		if !handlingVoice { try startHandlingVoice() }
 
 		Task.detached {
-			self.audioEngine.inputNode.installTap(onBus: 0, bufferSize: 4096, format: self.audioEngine.inputNode.outputFormat(forBus: 0)) { [weak self] buffer, _ in
+			self.audioEngine.inputNode.installTap(onBus: 0, bufferSize: 4096, format: self.audioEngine.inputNode.inputFormat(forBus: 0)) { [weak self] buffer, _ in
 				self?.processAudioBufferFromUser(buffer: buffer)
 			}
 		}

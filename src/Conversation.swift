@@ -9,10 +9,14 @@ public enum ConversationError: Error {
 @Observable
 public final class Conversation: Sendable {
 	private let client: RealtimeAPI
+    public let voice: Session.Voice
+    
 	@MainActor private var cancelTask: (() -> Void)?
 	private let errorStream: AsyncStream<ServerError>.Continuation
 
 	private let audioEngine = AVAudioEngine()
+    private let speedControl = AVAudioUnitVarispeed()
+    private let pitchControl = AVAudioUnitTimePitch()
 	private let playerNode = AVAudioPlayerNode()
 	private let queuedSamples = UnsafeMutableArray<String>()
 	private let apiConverter = UnsafeInteriorMutable<AVAudioConverter>()
@@ -55,9 +59,23 @@ public final class Conversation: Sendable {
 			default: return nil
 		} }
 	}
+    
+    @MainActor public var voiceSpeed: Float = 1.0 { // 0.25 - 4.0
+        didSet {
+            speedControl.rate = voiceSpeed
+        }
+    }
+    @MainActor public var voicePitch: Float = 0 { // -2400 - 2400
+        didSet {
+            pitchControl.pitch = voicePitch
+        }
+    }
 
-	private init(client: RealtimeAPI) {
+    private init(client: RealtimeAPI, voice: Session.Voice = .alloy, voiceSpeed: Float = 1.0, voicePitch: Float = 0.0) {
 		self.client = client
+        self.voice = voice
+        speedControl.rate = voiceSpeed
+        pitchControl.pitch = voicePitch
 		(errors, errorStream) = AsyncStream.makeStream(of: ServerError.self)
 
 		let task = Task.detached { [weak self] in
@@ -85,6 +103,11 @@ public final class Conversation: Sendable {
 
 			_keepIsPlayingPropertyUpdated()
 		}
+        
+        Task { @MainActor in
+            self.voiceSpeed = voiceSpeed
+            self.voicePitch = voicePitch
+        }
 	}
 
 	deinit {
@@ -97,13 +120,23 @@ public final class Conversation: Sendable {
 	}
 
 	/// Create a new conversation providing an API token and, optionally, a model.
-	public convenience init(authToken token: String, model: String = "gpt-4o-realtime-preview") {
-		self.init(client: RealtimeAPI.webSocket(authToken: token, model: model))
+    public convenience init(authToken token: String, model: String = "gpt-4o-realtime-preview", voice: Session.Voice = .alloy, voiceSpeed: Float = 1.0, voicePitch: Float = 0.0) {
+        self.init(
+            client: RealtimeAPI.webSocket(authToken: token, model: model),
+            voice: voice,
+            voiceSpeed: voiceSpeed,
+            voicePitch: voicePitch
+        )
 	}
 
 	/// Create a new conversation that connects using a custom `URLRequest`.
-	public convenience init(connectingTo request: URLRequest) {
-		self.init(client: RealtimeAPI.webSocket(connectingTo: request))
+	public convenience init(connectingTo request: URLRequest, voice: Session.Voice = .alloy, voiceSpeed: Float = 1.0, voicePitch: Float = 0.0) {
+        self.init(
+            client: RealtimeAPI.webSocket(connectingTo: request),
+            voice: voice,
+            voiceSpeed: voiceSpeed,
+            voicePitch: voicePitch
+        )
 	}
 
 	/// Wait for the connection to be established
@@ -218,7 +251,12 @@ public extension Conversation {
 		#endif
 
 		audioEngine.attach(playerNode)
-		audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: converter.inputFormat)
+        audioEngine.attach(pitchControl)
+        audioEngine.attach(speedControl)
+        
+        audioEngine.connect(playerNode, to: speedControl, format: converter.inputFormat)
+        audioEngine.connect(speedControl, to: pitchControl, format: converter.inputFormat)
+        audioEngine.connect(pitchControl, to: audioEngine.mainMixerNode, format: converter.inputFormat)
 
 		#if os(iOS)
 		try audioEngine.inputNode.setVoiceProcessingEnabled(true)

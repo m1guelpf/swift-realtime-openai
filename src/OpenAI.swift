@@ -34,12 +34,12 @@ public final class RealtimeAPI: NSObject, Sendable {
 /// Helper methods for connecting to the OpenAI Realtime API.
 extension RealtimeAPI {
 	/// Connect to the OpenAI WebSocket Realtime API with the given request.
-	static func webSocket(connectingTo request: URLRequest) -> RealtimeAPI {
+	public static func webSocket(connectingTo request: URLRequest) -> RealtimeAPI {
 		RealtimeAPI(connector: WebSocketConnector(connectingTo: request))
 	}
 
 	/// Connect to the OpenAI WebSocket Realtime API with the given authentication token and model.
-	static func webSocket(authToken: String, model: String = "gpt-4o-realtime-preview") -> RealtimeAPI {
+	public static func webSocket(authToken: String, model: String = "gpt-4o-realtime-preview") -> RealtimeAPI {
 		var request = URLRequest(url: URL(string: "wss://api.openai.com/v1/realtime")!.appending(queryItems: [
 			URLQueryItem(name: "model", value: model),
 		]))
@@ -50,12 +50,12 @@ extension RealtimeAPI {
 	}
 
 	/// Connect to the OpenAI WebRTC Realtime API with the given request.
-	static func webRTC(connectingTo request: URLRequest) async throws -> RealtimeAPI {
+	public static func webRTC(connectingTo request: URLRequest) async throws -> RealtimeAPI {
 		try RealtimeAPI(connector: await WebRTCConnector(connectingTo: request))
 	}
 
 	/// Connect to the OpenAI WebRTC Realtime API with the given authentication token and model.
-	static func webRTC(authToken: String, model: String = "gpt-4o-realtime-preview") async throws -> RealtimeAPI {
+	public static func webRTC(authToken: String, model: String = "gpt-4o-realtime-preview") async throws -> RealtimeAPI {
 		var request = URLRequest(url: URL(string: "wss://api.openai.com/v1/realtime")!.appending(queryItems: [
 			URLQueryItem(name: "model", value: model),
 		]))

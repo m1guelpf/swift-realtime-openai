@@ -244,12 +244,6 @@ public extension Conversation {
 		}
 		userConverter.set(converter)
 
-		#if os(iOS)
-		let audioSession = AVAudioSession.sharedInstance()
-		try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
-		try audioSession.setActive(true)
-		#endif
-
 		audioEngine.attach(playerNode)
         audioEngine.attach(pitchControl)
         audioEngine.attach(speedControl)
@@ -265,6 +259,13 @@ public extension Conversation {
 		audioEngine.prepare()
 		do {
 			try audioEngine.start()
+            
+            #if os(iOS)
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
+            try audioSession.setActive(true)
+            #endif
+            
 			handlingVoice = true
 		} catch {
 			print("Failed to enable audio engine: \(error)")

@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 @preconcurrency import AVFoundation
 
 public enum ConversationError: Error {
@@ -86,7 +86,7 @@ public final class Conversation: Sendable {
 			}
 
 			await MainActor.run {
-				self.connected = false
+                setDisconnected()
 			}
 		}
 
@@ -97,7 +97,7 @@ public final class Conversation: Sendable {
 				guard let self else { return }
 
 				Task { @MainActor in
-					self.connected = false
+                    setDisconnected()
 				}
 			}
 
@@ -325,12 +325,25 @@ public extension Conversation {
 
 /// Event handling private API
 private extension Conversation {
+    
+    @MainActor func setConnected() {
+        withAnimation {
+            connected = true
+        }
+    }
+    
+    @MainActor func setDisconnected() {
+        withAnimation {
+            connected = false
+        }
+    }
+    
 	@MainActor func handleEvent(_ event: ServerEvent) {
 		switch event {
 			case let .error(event):
 				errorStream.yield(event.error)
 			case let .sessionCreated(event):
-				connected = true
+                setConnected()
 				session = event.session
 			case let .sessionUpdated(event):
 				session = event.session

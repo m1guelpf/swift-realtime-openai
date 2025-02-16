@@ -30,7 +30,7 @@ public enum Item: Identifiable, Equatable, Sendable {
 		case audio(Audio)
 	}
 
-	public struct Message: Codable, Equatable, Sendable {
+    public struct Message: Codable, Equatable, Sendable, Identifiable {
 		public enum Content: Equatable, Sendable {
 			case text(String)
 			case audio(Audio)
@@ -70,7 +70,7 @@ public enum Item: Identifiable, Equatable, Sendable {
 		}
 	}
 
-	public struct FunctionCall: Codable, Equatable, Sendable {
+	public struct FunctionCall: Codable, Equatable, Sendable, Identifiable {
 		/// The unique ID of the item.
 		public var id: String
 		/// The type of the item
@@ -85,7 +85,7 @@ public enum Item: Identifiable, Equatable, Sendable {
 		public var arguments: String
 	}
 
-	public struct FunctionCallOutput: Codable, Equatable, Sendable {
+	public struct FunctionCallOutput: Codable, Equatable, Sendable, Identifiable {
 		/// The unique ID of the item.
 		public var id: String
 		/// The type of the item

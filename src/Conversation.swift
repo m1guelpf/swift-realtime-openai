@@ -1,5 +1,6 @@
 import Foundation
 @preconcurrency import AVFoundation
+@preconcurrency import WebRTC
 
 public enum ConversationError: Error {
 	case sessionNotFound
@@ -18,6 +19,9 @@ public final class Conversation: Sendable {
 	private let apiConverter = UnsafeInteriorMutable<AVAudioConverter>()
 	private let userConverter = UnsafeInteriorMutable<AVAudioConverter>()
 	private let desiredFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 24000, channels: 1, interleaved: false)!
+
+  // sampleRate 48000 or 44100 causes the audio playback sound funny (high-pitched)
+  //private let desiredFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 44100, channels: 1, interleaved: false)!
 
 	/// A stream of errors that occur during the conversation.
 	public let errors: AsyncStream<ServerError>
@@ -97,10 +101,27 @@ public final class Conversation: Sendable {
 	}
 
 	/// Create a new conversation providing an API token and, optionally, a model.
-	public convenience init(authToken token: String, model: String = "gpt-4o-realtime-preview") {
-		self.init(client: RealtimeAPI.webSocket(authToken: token, model: model))
+  public convenience init(authToken token: String) {
+    let model = "gpt-4o-realtime-preview-2024-12-17"
+    
+    // use websocket
+    print("webSocket initalization...")
+    self.init(client: RealtimeAPI.webSocket(authToken: token, model: model))//"gpt-4o-realtime-preview"))
 	}
 
+  public convenience init(authToken token: String, webRTC: Bool) async {
+    let model = "gpt-4o-realtime-preview-2024-12-17"
+
+    // use webrtc
+    do {
+      await try self.init(client: RealtimeAPI.webRTC(authToken: token, model: model))
+    }
+    catch {
+        print("Exception - webRTC init failed: \(error). \nFalling back to webSocket...")
+        self.init(client: RealtimeAPI.webSocket(authToken: token, model: model))
+    }
+  }
+  
 	/// Create a new conversation that connects using a custom `URLRequest`.
 	public convenience init(connectingTo request: URLRequest) {
 		self.init(client: RealtimeAPI.webSocket(connectingTo: request))
@@ -192,7 +213,7 @@ public extension Conversation {
 
 		isListening = true
 	}
-
+  
 	/// Stop listening to the user's microphone.
 	/// This won't stop playing back model responses. To fully stop handling voice conversations, call `stopHandlingVoice`.
 	@MainActor func stopListening() {
@@ -205,29 +226,104 @@ public extension Conversation {
 	/// Handle the playback of audio responses from the model.
 	@MainActor func startHandlingVoice() throws {
 		guard !handlingVoice else { return }
+    
+    let audioSession = RTCAudioSession.sharedInstance()
+    
+    let avAudioSession = AVAudioSession.sharedInstance()
+    try avAudioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
+    do {
+      try avAudioSession.setPreferredSampleRate(44100)
+    } catch {
+        print("Failed to set preferred sample rate: \(error.localizedDescription)")
+    }
+    try avAudioSession.setActive(true)    
+    
+    audioEngine.stop()
+    audioEngine.reset()
+    
+    
+
+
+    var currentInputNodeOutputFormat = audioEngine.inputNode.outputFormat(forBus: 0)
+    print("currentInputNodeOutputFormat: \(currentInputNodeOutputFormat.sampleRate), \(currentInputNodeOutputFormat.channelCount)")
+
+    var currentOutputNodeOutputFormat = audioEngine.outputNode.outputFormat(forBus: 0)
+    print("currentOutputNodeOutputFormat: \(currentOutputNodeOutputFormat.sampleRate),  \(currentOutputNodeOutputFormat.channelCount)")
+    
+    print("Audio Session Sample Rate: \(AVAudioSession.sharedInstance().sampleRate), Input Channels: \(AVAudioSession.sharedInstance().inputNumberOfChannels)")
+
+//    print("converter.inputFormat.sampleRate: \(converter.inputFormat.sampleRate),  \(converter.inputFormat.channelCount)")
+//    print("converter.outputFormat.sampleRate: \(converter.outputFormat.sampleRate),  \(converter.outputFormat.channelCount)")
+    
+//    currentInputNodeOutputFormat = audioEngine.inputNode.outputFormat(forBus: 0)
+//    print("currentInputNodeOutputFormat: \(currentInputNodeOutputFormat.sampleRate), \(currentInputNodeOutputFormat.channelCount)")
+//
+//    currentOutputNodeOutputFormat = audioEngine.outputNode.outputFormat(forBus: 0)
+//    print("currentOutputNodeOutputFormat: \(currentOutputNodeOutputFormat.sampleRate),  \(currentOutputNodeOutputFormat.channelCount)")
+
+//    print("converter.inputFormat.sampleRate: \(converter.inputFormat.sampleRate),  \(converter.inputFormat.channelCount)")
+//    print("converter.outputFormat.sampleRate: \(converter.outputFormat.sampleRate),  \(converter.outputFormat.channelCount)")
+//
 
 		guard let converter = AVAudioConverter(from: audioEngine.inputNode.outputFormat(forBus: 0), to: desiredFormat) else {
 			throw ConversationError.converterInitializationFailed
 		}
 		userConverter.set(converter)
 
-		#if os(iOS)
-		let audioSession = AVAudioSession.sharedInstance()
-		try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
-		try audioSession.setActive(true)
-		#endif
 
 		audioEngine.attach(playerNode)
-		audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: converter.inputFormat)
+    //audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: converter.inputFormat)
+    
+    let compatibleFormat = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1)
+    audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: compatibleFormat)
 
+    
+    // for websocket:
+//    currentInputNodeOutputFormat: 44100.0, 1
+//    currentOutputNodeOutputFormat: 44100.0,  1
+//    converter.inputFormat.sampleRate: 44100.0,  1
+//    converter.outputFormat.sampleRate: 24000.0,  1
+//    for webrtc - in WebRTCConnector.swift, print(RTCAudioSession.sharedInstance().sampleRate) is 48000
+//    currentInputNodeOutputFormat: 48000.0, 1
+//    currentOutputNodeOutputFormat: 48000.0,  1
+//    converter.inputFormat.sampleRate: 48000.0,  1
+//    converter.outputFormat.sampleRate: 24000.0,  1
+//    TODO: make input node(?) format sampling rate 44100 so setVoiceProcessingEnabled
+    
+    
+    if audioEngine.inputNode.isVoiceProcessingEnabled {
+      print(">>>> isVoiceProcessingEnabled true")
+    }
+    else {
+      print(">>>> isVoiceProcessingEnabled false")
+    }
+
+    
 		#if os(iOS)
-		try audioEngine.inputNode.setVoiceProcessingEnabled(true)
+    do {
+      try audioEngine.inputNode.setVoiceProcessingEnabled(true)
+    } catch {
+        print("Failed to setVoiceProcessingEnabled: \(error.localizedDescription)")
+    }
 		#endif
 
 		audioEngine.prepare()
 		do {
 			try audioEngine.start()
-			handlingVoice = true
+
+      
+      #if os(iOS)
+      let audioSession = AVAudioSession.sharedInstance()
+      try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
+      try audioSession.setPreferredSampleRate(44100)
+      //try audioSession.setPreferredIOBufferDuration(0.01)
+      try audioSession.setActive(true)
+
+      let actualSampleRate = audioSession.sampleRate
+      print(">>> Actual Sample Rate: \(actualSampleRate)")
+      #endif
+            
+      handlingVoice = true
 		} catch {
 			print("Failed to enable audio engine: \(error)")
 

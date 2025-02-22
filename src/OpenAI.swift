@@ -5,6 +5,7 @@ import FoundationNetworking
 
 enum RealtimeAPIError: Error {
 	case invalidMessage
+    case disconnected(URLSessionWebSocketTask.CloseCode)
 }
 
 public final class RealtimeAPI: NSObject, Sendable {

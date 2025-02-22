@@ -32,6 +32,8 @@ public final class Conversation: @unchecked Sendable {
     /// A stream of errors that occur during the conversation.
     public let responses: AsyncStream<Response>
     
+    private let audioInterruptHandler: AudioInterruptHandler
+    
 	/// The unique ID of the conversation.
 	@MainActor public private(set) var conversationId: String?
 
@@ -84,20 +86,43 @@ public final class Conversation: @unchecked Sendable {
         self.id = id
         self.client = client
         self.voice = voice
+        audioInterruptHandler = AudioInterruptHandler()
         speedControl.rate = voiceSpeed
         pitchControl.pitch = voicePitch
 		(errors, errorStream) = AsyncStream.makeStream(of: ServerError.self)
         (responses, responseStream) = AsyncStream.makeStream(of: Response.self)
         
+        audioInterruptHandler.audioInterrupted = { [weak self] reason in
+            self?.audioInterrupted(reason: reason)
+        }
+        audioInterruptHandler.audioInterruptionEnded = { [weak self] shouldResume in
+            self?.audioInterruptionEnded(shouldResume: shouldResume)
+        }
+        
         let events = client.events
-
+        
         self.task = Task.detached { [weak self] in
-			for try await event in events {
-                guard !Task.isCancelled else { break }
-				await self?.handleEvent(event)
-			}
+            do {
+                for try await event in events {
+                    guard !Task.isCancelled else { break }
+                    await self?.handleEvent(event)
+                }
+                NSLog("🗣️ Event stream completed successfully.")
+            } catch {
+                NSLog("🗣️❌ Event stream completed with error: \(error)")
+                self?.errorStream.yield(
+                    ServerError(
+                        type: "Disconnected",
+                        code: nil,
+                        message: "Error: \(error)",
+                        param: nil,
+                        eventId: nil
+                    )
+                )
+            }
 
 			await MainActor.run { [weak self] in
+                NSLog("🗣️ Setting Conversation Disconnected...")
                 self?.setDisconnected()
 			}
 		}
@@ -587,4 +612,31 @@ extension Conversation {
 			self?._keepIsPlayingPropertyUpdated()
 		}
 	}
+}
+
+extension Conversation {
+    func audioInterrupted(reason: AVAudioSession.InterruptionReason?) {
+        Task { @MainActor in
+            NSLog("🗣️🚫 Audio Interrupted (reason: \(String(describing: reason))), stopping voice handling...")
+            stopListening()
+            // If you stop handling voice here you won't get the interrupt ended event.
+        }
+    }
+    
+    func audioInterruptionEnded(shouldResume: Bool) {
+        guard shouldResume else {
+            NSLog("🗣️🚫 Audio Interrupt ended, should resume false.")
+            return
+        }
+        Task { @MainActor in
+            do {
+                // We need to stop handling voice to reset the audio stack
+                stopHandlingVoice()
+                try startListening()
+                NSLog("🗣️🟢 Audio Interrupt ended, voice handling can restart.")
+            } catch {
+                NSLog("🗣️🚫 Audio Interrupt ended, should not restart: \(error)")
+            }
+        }
+    }
 }

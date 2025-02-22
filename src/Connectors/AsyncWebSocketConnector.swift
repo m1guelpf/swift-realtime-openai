@@ -4,6 +4,8 @@ import FoundationNetworking
 #endif
 
 public final class AsyncWebSocketConnector: NSObject, Connector, Sendable {
+    
+    
     @MainActor public private(set) var onDisconnect: (@Sendable () -> Void)? = nil
     public let events: AsyncThrowingStream<ServerEvent, Error>
 
@@ -30,6 +32,11 @@ public final class AsyncWebSocketConnector: NSObject, Connector, Sendable {
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             
             while isActive && webSocket.closeCode == .invalid && !Task.isCancelled {
+                guard webSocket.closeCode == .invalid else {
+                    NSLog("🕸️ socket closed WebSocketConnector")
+                    stream.yield(error: RealtimeAPIError.disconnected(webSocket.closeCode))
+                    break
+                }
                 do {
                     let message = try await webSocket.receive()
                     

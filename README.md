@@ -1,6 +1,7 @@
-**Update Feb 21, 2025** Added the WebRTC support. See the complete demo [here](https://github.com/jeffxtang/ios_realtime_api) on how to use both WebRTC and WebSocket.
-
 # A modern Swift SDK for OpenAI's Realtime API
+
+**[Update Feb 21, 2025 Added the WebRTC support. See the complete demo [here](https://github.com/jeffxtang/ios_realtime_api) on how to use both WebRTC and WebSocket.]**
+
 
 [![Install Size](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fwww.emergetools.com%2Fapi%2Fv2%2Fpublic_new_build%3FexampleId%3Dswift-realtime-openai.OpenAI%26platform%3Dios%26badgeOption%3Dmax_install_size_only%26buildType%3Drelease&query=$.badgeMetadata&label=OpenAI&logo=apple)](https://www.emergetools.com/app/example/ios/swift-realtime-openai.OpenAI/release)
 [![Swift Version](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fm1guelpf%2Fswift-realtime-openai%2Fbadge%3Ftype%3Dswift-versions&color=brightgreen)](https://swiftpackageindex.com/m1guelpf/swift-realtime-openai)

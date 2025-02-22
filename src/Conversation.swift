@@ -1,5 +1,6 @@
 import Foundation
 @preconcurrency import AVFoundation
+@preconcurrency import WebRTC
 
 public enum ConversationError: Error {
 	case sessionNotFound
@@ -19,6 +20,8 @@ public final class Conversation: Sendable {
 	private let userConverter = UnsafeInteriorMutable<AVAudioConverter>()
 	private let desiredFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 24000, channels: 1, interleaved: false)!
 
+  public func getClient() -> RealtimeAPI { return client }
+  
 	/// A stream of errors that occur during the conversation.
 	public let errors: AsyncStream<ServerError>
 
@@ -97,10 +100,27 @@ public final class Conversation: Sendable {
 	}
 
 	/// Create a new conversation providing an API token and, optionally, a model.
-	public convenience init(authToken token: String, model: String = "gpt-4o-realtime-preview") {
-		self.init(client: RealtimeAPI.webSocket(authToken: token, model: model))
+  public convenience init(authToken token: String) {
+    let model = "gpt-4o-realtime-preview-2024-12-17"
+    
+    // use websocket
+    print("webSocket initalization...")
+    self.init(client: RealtimeAPI.webSocket(authToken: token, model: model))
 	}
 
+  public convenience init(authToken token: String, webRTC: Bool) async {
+    let model = "gpt-4o-realtime-preview-2024-12-17"
+
+    // use webrtc
+    do {
+      await try self.init(client: RealtimeAPI.webRTC(authToken: token, model: model))
+    }
+    catch {
+        print("Exception - webRTC init failed: \(error). \nFalling back to webSocket...")
+        self.init(client: RealtimeAPI.webSocket(authToken: token, model: model))
+    }
+  }
+  
 	/// Create a new conversation that connects using a custom `URLRequest`.
 	public convenience init(connectingTo request: URLRequest) {
 		self.init(client: RealtimeAPI.webSocket(connectingTo: request))
@@ -192,7 +212,7 @@ public extension Conversation {
 
 		isListening = true
 	}
-
+  
 	/// Stop listening to the user's microphone.
 	/// This won't stop playing back model responses. To fully stop handling voice conversations, call `stopHandlingVoice`.
 	@MainActor func stopListening() {
@@ -203,40 +223,51 @@ public extension Conversation {
 	}
 
 	/// Handle the playback of audio responses from the model.
-	@MainActor func startHandlingVoice() throws {
-		guard !handlingVoice else { return }
+  @MainActor func startHandlingVoice() throws {
+    guard !handlingVoice else { return }
+    
+    guard let converter = AVAudioConverter(from: audioEngine.inputNode.outputFormat(forBus: 0), to: desiredFormat) else {
+      throw ConversationError.converterInitializationFailed
+    }
+    userConverter.set(converter)
 
-		guard let converter = AVAudioConverter(from: audioEngine.inputNode.outputFormat(forBus: 0), to: desiredFormat) else {
-			throw ConversationError.converterInitializationFailed
-		}
-		userConverter.set(converter)
+    audioEngine.attach(playerNode)
+    
+    let compatibleFormat = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1)
+    audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: compatibleFormat)
+    
+    
+    #if os(iOS)
+    do {
+      try audioEngine.inputNode.setVoiceProcessingEnabled(true)
+    } catch {
+        print("Failed to setVoiceProcessingEnabled: \(error.localizedDescription)")
+    }
+    #endif
 
-		#if os(iOS)
-		let audioSession = AVAudioSession.sharedInstance()
-		try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
-		try audioSession.setActive(true)
-		#endif
+    audioEngine.prepare()
+    do {
+      try audioEngine.start()
 
-		audioEngine.attach(playerNode)
-		audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: converter.inputFormat)
+      
+      #if os(iOS)
+      let audioSession = AVAudioSession.sharedInstance()
+      try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
+      try audioSession.setPreferredSampleRate(44100)
+      try audioSession.setActive(true)
 
-		#if os(iOS)
-		try audioEngine.inputNode.setVoiceProcessingEnabled(true)
-		#endif
+      #endif
+            
+      handlingVoice = true
+    } catch {
+      print("Failed to enable audio engine: \(error)")
 
-		audioEngine.prepare()
-		do {
-			try audioEngine.start()
-			handlingVoice = true
-		} catch {
-			print("Failed to enable audio engine: \(error)")
+      audioEngine.disconnectNodeInput(playerNode)
+      audioEngine.disconnectNodeOutput(playerNode)
 
-			audioEngine.disconnectNodeInput(playerNode)
-			audioEngine.disconnectNodeOutput(playerNode)
-
-			throw error
-		}
-	}
+      throw error
+    }
+  }
 
 	/// Interrupt the model's response if it's currently playing.
 	/// This lets the model know that the user didn't hear the full response.

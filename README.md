@@ -4,6 +4,8 @@
 [![Swift Version](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fm1guelpf%2Fswift-realtime-openai%2Fbadge%3Ftype%3Dswift-versions&color=brightgreen)](https://swiftpackageindex.com/m1guelpf/swift-realtime-openai)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/m1guelpf/swift-realtime-openai/main/LICENSE)
 
+**[Update Feb 21, 2025 Added the WebRTC support. See the complete demo [here](https://github.com/jeffxtang/ios_realtime_api) on how to use both WebRTC and WebSocket.]**
+
 This library provides a simple interface for implementing multi-modal conversations using OpenAI's new Realtime API.
 
 It can handle automatically recording the user's microphone and playing back the assistant's response, and also gives you a transparent layer over the API for advanced use cases.
@@ -121,7 +123,7 @@ struct ContentView: View {
 -   [x] Optionally handle recording the user's mic and sending it to the API
 -   [x] Optionally handle playing model responses as they stream in
 -   [x] Allow interrupting the model
--   [ ] WebRTC support
+-   [x] WebRTC support
 
 ## Architecture
 

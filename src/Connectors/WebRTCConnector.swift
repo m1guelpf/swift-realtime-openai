@@ -25,6 +25,10 @@ public final class WebRTCConnector: NSObject, Connector, Sendable {
 		return RTCPeerConnectionFactory()
 	}()
 
+  public func getConnection() -> RTCPeerConnection {
+    self.connection
+  }
+  
 	private let encoder: JSONEncoder = {
 		let encoder = JSONEncoder()
 		encoder.keyEncodingStrategy = .convertToSnakeCase
@@ -43,10 +47,16 @@ public final class WebRTCConnector: NSObject, Connector, Sendable {
 		}
 		self.connection = connection
 
-		guard let dataChannel = self.connection.dataChannel(forLabel: "WebRTCData", configuration: RTCDataChannelConfiguration()) else {
-			throw WebRTCError.failedToCreateDataChannel
-		}
-		self.dataChannel = dataChannel
+    let audioTrackSource = WebRTCConnector.factory.audioSource(with: nil)
+    let audioTrack = WebRTCConnector.factory.audioTrack(with: audioTrackSource, trackId: "audio0")
+    let mediaStream = WebRTCConnector.factory.mediaStream(withStreamId: "stream0")
+    mediaStream.addAudioTrack(audioTrack)
+    self.connection.add(audioTrack, streamIds: ["stream0"])
+        
+    guard let dataChannel = self.connection.dataChannel(forLabel: "oai-events", configuration: RTCDataChannelConfiguration()) else {
+      throw WebRTCError.failedToCreateDataChannel
+    }
+    self.dataChannel = dataChannel
 
 		(events, stream) = AsyncThrowingStream.makeStream(of: ServerEvent.self)
 
@@ -56,14 +66,23 @@ public final class WebRTCConnector: NSObject, Connector, Sendable {
 		dataChannel.delegate = self
 
 		var request = request
-
-		let offer = try await self.connection.offer(for: .init(mandatoryConstraints: nil, optionalConstraints: nil))
+    
+    let constraints = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: [
+      "OfferToReceiveAudio": "true",
+      "googEchoCancellation": "true",
+        "googAutoGainControl": "true",
+        "googNoiseSuppression": "true",
+        "googHighpassFilter": "true"
+    ])
+    
+    let offer = try await self.connection.offer(for: constraints)
+    
 		try await self.connection.setLocalDescription(offer)
 
 		request.httpBody = offer.sdp.data(using: .utf8)
-
+    
 		let (data, res) = try await URLSession.shared.data(for: request)
-		guard (res as? HTTPURLResponse)?.statusCode == 200, let sdp = String(data: data, encoding: .utf8) else {
+		guard (res as? HTTPURLResponse)?.statusCode == 201, let sdp = String(data: data, encoding: .utf8) else {
 			throw WebRTCError.badServerResponse
 		}
 
@@ -90,8 +109,16 @@ extension WebRTCConnector: RTCPeerConnectionDelegate {
 		print("Connection state changed to \(connection.signalingState)")
 	}
 
-	public func peerConnection(_: RTCPeerConnection, didAdd _: RTCMediaStream) {
+	public func peerConnection(_: RTCPeerConnection, didAdd stream: RTCMediaStream) {
 		print("Media stream added.")
+    if let audioTrack = stream.audioTracks.first {
+        print("Audio track received")
+        let audioSession = AVAudioSession.sharedInstance()
+        do {
+            try AVAudioSession.sharedInstance().overrideOutputAudioPort(AVAudioSession.PortOverride.speaker)
+        } catch{
+        }
+    }
 	}
 
 	public func peerConnection(_: RTCPeerConnection, didRemove _: RTCMediaStream) {

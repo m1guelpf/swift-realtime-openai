@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 @preconcurrency import AVFoundation
 
 public enum ConversationError: Error {
@@ -7,23 +7,35 @@ public enum ConversationError: Error {
 }
 
 @Observable
-public final class Conversation: Sendable {
+public final class Conversation: @unchecked Sendable {
 	private let client: RealtimeAPI
-	@MainActor private var cancelTask: (() -> Void)?
+    public let voice: Session.Voice
+
 	private let errorStream: AsyncStream<ServerError>.Continuation
+    private let responseStream: AsyncStream<Response>.Continuation
 
 	private let audioEngine = AVAudioEngine()
+    private let speedControl = AVAudioUnitVarispeed()
+    private let pitchControl = AVAudioUnitTimePitch()
 	private let playerNode = AVAudioPlayerNode()
 	private let queuedSamples = UnsafeMutableArray<String>()
 	private let apiConverter = UnsafeInteriorMutable<AVAudioConverter>()
 	private let userConverter = UnsafeInteriorMutable<AVAudioConverter>()
 	private let desiredFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 24000, channels: 1, interleaved: false)!
 
+    /// Local reference ID for this Conversation
+    public let id: UUID
+    
 	/// A stream of errors that occur during the conversation.
 	public let errors: AsyncStream<ServerError>
 
+    /// A stream of errors that occur during the conversation.
+    public let responses: AsyncStream<Response>
+    
+    private let audioInterruptHandler: AudioInterruptHandler
+    
 	/// The unique ID of the conversation.
-	@MainActor public private(set) var id: String?
+	@MainActor public private(set) var conversationId: String?
 
 	/// The current session for this conversation.
 	@MainActor public private(set) var session: Session?
@@ -55,55 +67,116 @@ public final class Conversation: Sendable {
 			default: return nil
 		} }
 	}
+    
+    @MainActor public var voiceSpeed: Float = 1.0 { // 0.25 - 4.0
+        didSet {
+            speedControl.rate = voiceSpeed
+        }
+    }
+    @MainActor public var voicePitch: Float = 0 { // -2400 - 2400
+        didSet {
+            pitchControl.pitch = voicePitch
+        }
+    }
+    
+    // Do not mutate this from anywhere other than the init.
+    private var task: Task<Void, Error>!
 
-	private init(client: RealtimeAPI) {
-		self.client = client
+    private init(id: UUID, client: RealtimeAPI, voice: Session.Voice = .alloy, voiceSpeed: Float = 1.0, voicePitch: Float = 0.0) {
+        self.id = id
+        self.client = client
+        self.voice = voice
+        audioInterruptHandler = AudioInterruptHandler()
+        speedControl.rate = voiceSpeed
+        pitchControl.pitch = voicePitch
 		(errors, errorStream) = AsyncStream.makeStream(of: ServerError.self)
+        (responses, responseStream) = AsyncStream.makeStream(of: Response.self)
+        
+        audioInterruptHandler.audioInterrupted = { [weak self] reason in
+            self?.audioInterrupted(reason: reason)
+        }
+        audioInterruptHandler.audioInterruptionEnded = { [weak self] shouldResume in
+            self?.audioInterruptionEnded(shouldResume: shouldResume)
+        }
+        
+        let events = client.events
+        
+        self.task = Task.detached { [weak self] in
+            do {
+                for try await event in events {
+                    guard !Task.isCancelled else { break }
+                    await self?.handleEvent(event)
+                }
+                NSLog("🗣️ Event stream completed successfully.")
+            } catch {
+                NSLog("🗣️❌ Event stream completed with error: \(error)")
+                self?.errorStream.yield(
+                    ServerError(
+                        type: "Disconnected",
+                        code: nil,
+                        message: "Error: \(error)",
+                        param: nil,
+                        eventId: nil
+                    )
+                )
+            }
 
-		let task = Task.detached { [weak self] in
-			guard let self else { return }
-
-			for try await event in client.events {
-				await self.handleEvent(event)
-			}
-
-			await MainActor.run {
-				self.connected = false
+			await MainActor.run { [weak self] in
+                NSLog("🗣️ Setting Conversation Disconnected...")
+                self?.setDisconnected()
 			}
 		}
 
-		Task { @MainActor in
-			self.cancelTask = task.cancel
+		Task { @MainActor  in
+            self.voiceSpeed = voiceSpeed
+            self.voicePitch = voicePitch
 
 			client.onDisconnect = { [weak self] in
-				guard let self else { return }
-
+                guard let self else { return }
+                
 				Task { @MainActor in
-					self.connected = false
+                    self.setDisconnected()
 				}
 			}
 
-			_keepIsPlayingPropertyUpdated()
+            _keepIsPlayingPropertyUpdated()
 		}
 	}
 
 	deinit {
+        NSLog("🗣️ deinit Conversation (id: \(id))")
+        task.cancel()
 		errorStream.finish()
-
-		DispatchQueue.main.asyncAndWait {
-			cancelTask?()
-			stopHandlingVoice()
-		}
+        responseStream.finish()
+        
+        Task { [playerNode, audioEngine] in
+            Self.cleanUpAudio(
+                playerNode: playerNode,
+                audioEngine: audioEngine
+            )
+        }
 	}
 
 	/// Create a new conversation providing an API token and, optionally, a model.
-	public convenience init(authToken token: String, model: String = "gpt-4o-realtime-preview") {
-		self.init(client: RealtimeAPI.webSocket(authToken: token, model: model))
+    public convenience init(id: UUID, authToken token: String, model: String = "gpt-4o-realtime-preview", voice: Session.Voice = .alloy, voiceSpeed: Float = 1.0, voicePitch: Float = 0.0) {
+        self.init(
+            id: id,
+            client: RealtimeAPI.webSocket(authToken: token, model: model),
+            voice: voice,
+            voiceSpeed: voiceSpeed,
+            voicePitch: voicePitch
+        )
 	}
 
 	/// Create a new conversation that connects using a custom `URLRequest`.
-	public convenience init(connectingTo request: URLRequest) {
-		self.init(client: RealtimeAPI.webSocket(connectingTo: request))
+	public convenience init(id: UUID, connectingTo request: URLRequest, voice: Session.Voice = .alloy, voiceSpeed: Float = 1.0, voicePitch: Float = 0.0) {
+        self.init(
+            id: id,
+            client: RealtimeAPI.webSocket(connectingTo: request),
+            voice: voice,
+            voiceSpeed: voiceSpeed,
+            voicePitch: voicePitch
+        )
 	}
 
 	/// Wait for the connection to be established
@@ -184,8 +257,8 @@ public extension Conversation {
 		guard !isListening else { return }
 		if !handlingVoice { try startHandlingVoice() }
 
-		Task.detached {
-			self.audioEngine.inputNode.installTap(onBus: 0, bufferSize: 4096, format: self.audioEngine.inputNode.outputFormat(forBus: 0)) { [weak self] buffer, _ in
+        Task.detached { [audioEngine] in
+			audioEngine.inputNode.installTap(onBus: 0, bufferSize: 4096, format: audioEngine.inputNode.outputFormat(forBus: 0)) { [weak self] buffer, _ in
 				self?.processAudioBufferFromUser(buffer: buffer)
 			}
 		}
@@ -211,14 +284,13 @@ public extension Conversation {
 		}
 		userConverter.set(converter)
 
-		#if os(iOS)
-		let audioSession = AVAudioSession.sharedInstance()
-		try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
-		try audioSession.setActive(true)
-		#endif
-
 		audioEngine.attach(playerNode)
-		audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: converter.inputFormat)
+        audioEngine.attach(pitchControl)
+        audioEngine.attach(speedControl)
+        
+        audioEngine.connect(playerNode, to: speedControl, format: converter.inputFormat)
+        audioEngine.connect(speedControl, to: pitchControl, format: converter.inputFormat)
+        audioEngine.connect(pitchControl, to: audioEngine.mainMixerNode, format: converter.inputFormat)
 
 		#if os(iOS)
 		try audioEngine.inputNode.setVoiceProcessingEnabled(true)
@@ -227,6 +299,13 @@ public extension Conversation {
 		audioEngine.prepare()
 		do {
 			try audioEngine.start()
+            
+            #if os(iOS)
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
+            try audioSession.setActive(true)
+            #endif
+            
 			handlingVoice = true
 		} catch {
 			print("Failed to enable audio engine: \(error)")
@@ -248,7 +327,7 @@ public extension Conversation {
 		{
 			let audioTimeInMiliseconds = Int((Double(playerTime.sampleTime) / playerTime.sampleRate) * 1000)
 
-			Task {
+			Task { [client] in
 				do {
 					try await client.send(event: .truncateConversationItem(forItem: itemID, atAudioMs: audioTimeInMiliseconds))
 				} catch {
@@ -264,39 +343,77 @@ public extension Conversation {
 	/// Stop playing audio responses from the model and listening to the user's microphone.
 	@MainActor func stopHandlingVoice() {
 		guard handlingVoice else { return }
+        NSLog("🗣️ Conversation stopHandlingVoice")
 
-		audioEngine.inputNode.removeTap(onBus: 0)
-		audioEngine.stop()
-		audioEngine.disconnectNodeInput(playerNode)
-		audioEngine.disconnectNodeOutput(playerNode)
-
-		#if os(iOS)
-		try? AVAudioSession.sharedInstance().setActive(false)
-		#elseif os(macOS)
-		if audioEngine.isRunning {
-			audioEngine.stop()
-			audioEngine.reset()
-		}
-		#endif
+        Self.cleanUpAudio(
+            playerNode: playerNode,
+            audioEngine: audioEngine
+        )
 
 		isListening = false
 		handlingVoice = false
 	}
+    
+    static func cleanUpAudio(playerNode: AVAudioPlayerNode, audioEngine: AVAudioEngine) {
+        // If attachedNodes does not contain the playerNode then `startHandlingVoice` was never called
+        guard audioEngine.attachedNodes.contains(playerNode) else { return }
+        
+        audioEngine.inputNode.removeTap(onBus: 0)
+        audioEngine.stop()
+        audioEngine.disconnectNodeInput(playerNode)
+        audioEngine.disconnectNodeOutput(playerNode)
+
+        #if os(iOS)
+        try? AVAudioSession.sharedInstance().setActive(false)
+        #elseif os(macOS)
+        if audioEngine.isRunning {
+            audioEngine.stop()
+            audioEngine.reset()
+        }
+        #endif
+        
+        NSLog("🗣️ AudioEngine Cleaned-up")
+    }
 }
 
 /// Event handling private API
 private extension Conversation {
+    
+    @MainActor func setConnected() {
+        withAnimation {
+            connected = true
+        }
+    }
+    
+    @MainActor func setDisconnected() {
+        withAnimation {
+            connected = false
+        }
+    }
+    
+    @MainActor func setUserSpeaking() {
+        withAnimation {
+            isUserSpeaking = true
+        }
+    }
+    
+    @MainActor func setUserNotSpeaking() {
+        withAnimation {
+            isUserSpeaking = false
+        }
+    }
+    
 	@MainActor func handleEvent(_ event: ServerEvent) {
 		switch event {
 			case let .error(event):
 				errorStream.yield(event.error)
 			case let .sessionCreated(event):
-				connected = true
+                setConnected()
 				session = event.session
 			case let .sessionUpdated(event):
 				session = event.session
 			case let .conversationCreated(event):
-				id = event.conversation.id
+                conversationId = event.conversation.id
 			case let .conversationItemCreated(event):
 				entries.append(event.item)
 			case let .conversationItemDeleted(event):
@@ -355,10 +472,12 @@ private extension Conversation {
 					functionCall.arguments = event.arguments
 				}
 			case .inputAudioBufferSpeechStarted:
-				isUserSpeaking = true
+                setUserSpeaking()
 				if handlingVoice { interruptSpeech() }
 			case .inputAudioBufferSpeechStopped:
-				isUserSpeaking = false
+                setUserNotSpeaking()
+            case .responseCreated(let event), .responseDone(let event):
+                responseStream.yield(event.response)
             case let .responseOutputItemDone(event):
                 updateEvent(id: event.item.id) { message in
                     guard case let .message(newMessage) = event.item else { return }
@@ -482,12 +601,42 @@ extension Conversation {
 	/// This is because updating the `queuedSamples` array on a background thread will trigger a re-render of any views that depend on it on that thread.
 	/// So, instead, we observe the property and update `isPlaying` on the main actor.
 	private func _keepIsPlayingPropertyUpdated() {
-		withObservationTracking { _ = queuedSamples.isEmpty } onChange: {
+        withObservationTracking {  _ = queuedSamples.isEmpty } onChange: { [weak self] in
 			Task { @MainActor in
-				self.isPlaying = self.queuedSamples.isEmpty
+                guard let self else { return }
+                withAnimation {
+                    self.isPlaying = self.queuedSamples.isEmpty
+                }
 			}
 
-			self._keepIsPlayingPropertyUpdated()
+			self?._keepIsPlayingPropertyUpdated()
 		}
 	}
+}
+
+extension Conversation {
+    func audioInterrupted(reason: AVAudioSession.InterruptionReason?) {
+        Task { @MainActor in
+            NSLog("🗣️🚫 Audio Interrupted (reason: \(String(describing: reason))), stopping voice handling...")
+            stopListening()
+            // If you stop handling voice here you won't get the interrupt ended event.
+        }
+    }
+    
+    func audioInterruptionEnded(shouldResume: Bool) {
+        guard shouldResume else {
+            NSLog("🗣️🚫 Audio Interrupt ended, should resume false.")
+            return
+        }
+        Task { @MainActor in
+            do {
+                // We need to stop handling voice to reset the audio stack
+                stopHandlingVoice()
+                try startListening()
+                NSLog("🗣️🟢 Audio Interrupt ended, voice handling can restart.")
+            } catch {
+                NSLog("🗣️🚫 Audio Interrupt ended, should not restart: \(error)")
+            }
+        }
+    }
 }

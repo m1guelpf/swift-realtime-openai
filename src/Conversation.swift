@@ -20,6 +20,8 @@ public final class Conversation: Sendable {
 	private let userConverter = UnsafeInteriorMutable<AVAudioConverter>()
 	private let desiredFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 24000, channels: 1, interleaved: false)!
 
+  public func getClient() -> RealtimeAPI { return client }
+  
 	/// A stream of errors that occur during the conversation.
 	public let errors: AsyncStream<ServerError>
 
@@ -103,7 +105,7 @@ public final class Conversation: Sendable {
     
     // use websocket
     print("webSocket initalization...")
-    self.init(client: RealtimeAPI.webSocket(authToken: token, model: model))//"gpt-4o-realtime-preview"))
+    self.init(client: RealtimeAPI.webSocket(authToken: token, model: model))
 	}
 
   public convenience init(authToken token: String, webRTC: Bool) async {

@@ -25,6 +25,10 @@ public final class WebRTCConnector: NSObject, Connector, Sendable {
 		return RTCPeerConnectionFactory()
 	}()
 
+  public func getConnection() -> RTCPeerConnection {
+    self.connection
+  }
+  
 	private let encoder: JSONEncoder = {
 		let encoder = JSONEncoder()
 		encoder.keyEncodingStrategy = .convertToSnakeCase
@@ -63,7 +67,6 @@ public final class WebRTCConnector: NSObject, Connector, Sendable {
 
 		var request = request
     
-//    let constraints = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: ["OfferToReceiveAudio": "true"])
     let constraints = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: [
       "OfferToReceiveAudio": "true",
       "googEchoCancellation": "true",
@@ -111,12 +114,10 @@ extension WebRTCConnector: RTCPeerConnectionDelegate {
     if let audioTrack = stream.audioTracks.first {
         print("Audio track received")
         let audioSession = AVAudioSession.sharedInstance()
-        do{
+        do {
             try AVAudioSession.sharedInstance().overrideOutputAudioPort(AVAudioSession.PortOverride.speaker)
-        }catch{
+        } catch{
         }
-    }else{
-        print("Audio track not found")
     }
 	}
 

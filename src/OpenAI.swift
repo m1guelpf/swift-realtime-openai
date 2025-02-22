@@ -29,6 +29,15 @@ public final class RealtimeAPI: NSObject, Sendable {
 	public func send(event: ClientEvent) async throws {
 		try await connector.send(event: event)
 	}
+  
+  public func getConnector() -> WebRTCConnector? {
+    if let _ = self.connector as? WebSocketConnector {
+        return nil
+    }
+    else {
+      return self.connector as! WebRTCConnector
+    }
+  }
 }
 
 /// Helper methods for connecting to the OpenAI Realtime API.

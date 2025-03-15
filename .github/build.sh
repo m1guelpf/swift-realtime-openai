@@ -43,13 +43,13 @@ build_framework() {
 # Update the Package.swift to build the library as dynamic instead of static
 sed -i '' 's/type: \.static/type: .dynamic/g' Package.swift
 
-build_framework "iphoneos" "generic/platform=iOS" "OpenAI"
-build_framework "iphonesimulator" "generic/platform=iOS Simulator" "OpenAI"
+build_framework "iphoneos" "generic/platform=iOS" "OpenAIRealtime"
+build_framework "iphonesimulator" "generic/platform=iOS Simulator" "OpenAIRealtime"
 
 echo "Builds completed successfully."
 
-rm -rf "OpenAI.xcframework"
-xcodebuild -create-xcframework -framework OpenAI-iphonesimulator.xcarchive/Products/Library/Frameworks/OpenAI.framework -framework OpenAI-iphoneos.xcarchive/Products/Library/Frameworks/OpenAI.framework -output OpenAI.xcframework
+rm -rf "OpenAIRealtime.xcframework"
+xcodebuild -create-xcframework -framework OpenAIRealtime-iphonesimulator.xcarchive/Products/Library/Frameworks/OpenAIRealtime.framework -framework OpenAIRealtime-iphoneos.xcarchive/Products/Library/Frameworks/OpenAIRealtime.framework -output OpenAIRealtime.xcframework
 
-cp -r OpenAI-iphoneos.xcarchive/dSYMs OpenAI.xcframework/ios-arm64
-cp -r OpenAI-iphonesimulator.xcarchive/dSYMs OpenAI.xcframework/ios-arm64_x86_64-simulator
+cp -r OpenAIRealtime-iphoneos.xcarchive/dSYMs OpenAIRealtime.xcframework/ios-arm64
+cp -r OpenAIRealtime-iphonesimulator.xcarchive/dSYMs OpenAIRealtime.xcframework/ios-arm64_x86_64-simulator

@@ -1,9 +1,30 @@
 import Foundation
+import CoreAudio
+import AudioToolbox
+
 @preconcurrency import AVFoundation
 
 public enum ConversationError: Error {
 	case sessionNotFound
 	case converterInitializationFailed
+}
+
+public struct AudioDevice: Hashable {
+    public let id: AudioObjectID
+    public let name: String
+
+    public init(id: AudioObjectID, name: String) {
+        self.id = id
+        self.name = name
+    }
+
+    public static func == (lhs: AudioDevice, rhs: AudioDevice) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
 }
 
 @Observable
@@ -96,6 +117,228 @@ public final class Conversation: Sendable {
 		}
 	}
 
+    /// List available audio input devices on macOS.
+    @MainActor
+    public func listAvailableMicrophones() -> [AudioDevice] {
+        var devices: [AudioDevice] = []
+
+        // Get the list of audio devices
+        var deviceCount: UInt32 = 0
+        var propertySize = UInt32(MemoryLayout.size(ofValue: deviceCount))
+        var devicesPropertyAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDevices,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        let status = AudioObjectGetPropertyDataSize(
+            AudioObjectID(kAudioObjectSystemObject),
+            &devicesPropertyAddress,
+            0,
+            nil,
+            &propertySize
+        )
+
+        guard status == noErr else { return devices }
+
+        deviceCount = propertySize / UInt32(MemoryLayout<AudioObjectID>.size)
+        var deviceIDs = [AudioObjectID](repeating: AudioObjectID(0), count: Int(deviceCount))
+        let status2 = AudioObjectGetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject),
+            &devicesPropertyAddress,
+            0,
+            nil,
+            &propertySize,
+            &deviceIDs
+        )
+
+        guard status2 == noErr else { return devices }
+
+        for deviceID in deviceIDs {
+            // Check if the device is an input device
+            var isInput: UInt32 = 0
+            var propertySize = UInt32(MemoryLayout.size(ofValue: isInput))
+            var inputPropertyAddress = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyStreams,
+                mScope: kAudioDevicePropertyScopeInput,
+                mElement: kAudioObjectPropertyElementMain
+            )
+
+            let status = AudioObjectGetPropertyData(
+                deviceID,
+                &inputPropertyAddress,
+                0,
+                nil,
+                &propertySize,
+                &isInput
+            )
+
+            if status == noErr, isInput > 0 {
+                // Get the device name
+                var name: CFString = "" as CFString
+                var namePropertySize = UInt32(MemoryLayout.size(ofValue: name))
+                var namePropertyAddress = AudioObjectPropertyAddress(
+                    mSelector: kAudioDevicePropertyDeviceNameCFString,
+                    mScope: kAudioObjectPropertyScopeGlobal,
+                    mElement: kAudioObjectPropertyElementMain
+                )
+
+                let status3 = AudioObjectGetPropertyData(
+                    deviceID,
+                    &namePropertyAddress,
+                    0,
+                    nil,
+                    &namePropertySize,
+                    &name
+                )
+
+                if status3 == noErr {
+                    devices.append(AudioDevice(id: deviceID, name: name as String))
+                }
+            }
+        }
+
+        return devices
+    }
+
+    /// Set the selected microphone as the default input device.
+    @MainActor
+    public func setMicrophone(_ microphone: AudioDevice) throws {
+        var deviceID = microphone.id
+        var propertyAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        let status = AudioObjectSetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject),
+            &propertyAddress,
+            0,
+            nil,
+            UInt32(MemoryLayout.size(ofValue: deviceID)),
+            &deviceID
+        )
+
+        guard status == noErr else {
+            throw ConversationError.converterInitializationFailed
+        }
+
+        print("Microphone set to: \(microphone.name)")
+    }
+
+    /// List available audio output devices on macOS.
+    @MainActor
+    public func listAvailableSpeakers() -> [AudioDevice] {
+        var devices: [AudioDevice] = []
+
+        // Get the list of audio devices
+        var deviceCount: UInt32 = 0
+        var propertySize = UInt32(MemoryLayout.size(ofValue: deviceCount))
+        var devicesPropertyAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDevices,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        let status = AudioObjectGetPropertyDataSize(
+            AudioObjectID(kAudioObjectSystemObject),
+            &devicesPropertyAddress,
+            0,
+            nil,
+            &propertySize
+        )
+
+        guard status == noErr else { return devices }
+
+        deviceCount = propertySize / UInt32(MemoryLayout<AudioObjectID>.size)
+        var deviceIDs = [AudioObjectID](repeating: AudioObjectID(0), count: Int(deviceCount))
+        let status2 = AudioObjectGetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject),
+            &devicesPropertyAddress,
+            0,
+            nil,
+            &propertySize,
+            &deviceIDs
+        )
+
+        guard status2 == noErr else { return devices }
+
+        for deviceID in deviceIDs {
+            // Check if the device is an output device
+            var isOutput: UInt32 = 0
+            var propertySize = UInt32(MemoryLayout.size(ofValue: isOutput))
+            var outputPropertyAddress = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyStreams,
+                mScope: kAudioDevicePropertyScopeOutput,
+                mElement: kAudioObjectPropertyElementMain
+            )
+
+            let status = AudioObjectGetPropertyData(
+                deviceID,
+                &outputPropertyAddress,
+                0,
+                nil,
+                &propertySize,
+                &isOutput
+            )
+
+            if status == noErr, isOutput > 0 {
+                // Get the device name
+                var name: CFString = "" as CFString
+                var namePropertySize = UInt32(MemoryLayout.size(ofValue: name))
+                var namePropertyAddress = AudioObjectPropertyAddress(
+                    mSelector: kAudioDevicePropertyDeviceNameCFString,
+                    mScope: kAudioObjectPropertyScopeGlobal,
+                    mElement: kAudioObjectPropertyElementMain
+                )
+
+                let status3 = AudioObjectGetPropertyData(
+                    deviceID,
+                    &namePropertyAddress,
+                    0,
+                    nil,
+                    &namePropertySize,
+                    &name
+                )
+
+                if status3 == noErr {
+                    devices.append(AudioDevice(id: deviceID, name: name as String))
+                }
+            }
+        }
+
+        return devices
+    }
+
+    /// Set the selected speaker as the default output device.
+    @MainActor
+    public func setSpeaker(_ speaker: AudioDevice) throws {
+        var deviceID = speaker.id
+        var propertyAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        let status = AudioObjectSetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject),
+            &propertyAddress,
+            0,
+            nil,
+            UInt32(MemoryLayout.size(ofValue: deviceID)),
+            &deviceID
+        )
+
+        guard status == noErr else {
+            throw ConversationError.converterInitializationFailed
+        }
+
+        print("Speaker set to: \(speaker.name)")
+    }
+
+    
+    
 	/// Create a new conversation providing an API token and, optionally, a model.
 	public convenience init(authToken token: String, model: String = "gpt-4o-realtime-preview") {
 		self.init(client: RealtimeAPI.webSocket(authToken: token, model: model))
@@ -185,7 +428,7 @@ public extension Conversation {
 		if !handlingVoice { try startHandlingVoice() }
 
 		Task.detached {
-			self.audioEngine.inputNode.installTap(onBus: 0, bufferSize: 4096, format: self.audioEngine.inputNode.outputFormat(forBus: 0)) { [weak self] buffer, _ in
+			self.audioEngine.inputNode.installTap(onBus: 0, bufferSize: 4096, format: self.audioEngine.inputNode.inputFormat(forBus: 0)) { [weak self] buffer, _ in
 				self?.processAudioBufferFromUser(buffer: buffer)
 			}
 		}

@@ -22,42 +22,68 @@ public struct Session: Codable, Equatable, Sendable {
 	}
 
 	public struct InputAudioTranscription: Codable, Equatable, Sendable {
+		/// The model to use for transcription
 		public var model: String
+		/// The language of the input audio. Supplying the input language in ISO-639-1 (e.g. `en`) format will improve accuracy and latency.
+		public var language: String?
+		/// An optional text to guide the model's style or continue a previous audio segment.
+		public var prompt: String?
 
 		public init(model: String = "whisper-1") {
 			self.model = model
 		}
 	}
 
+	public struct InputAudioNoiseReduction: Codable, Equatable, Sendable {
+		/// Type of noise reduction.
+		public enum NoiseReductionType: String, CaseIterable, Codable, Sendable {
+			/// For close-talking microphones such as headphones
+			case nearField = "near_field"
+			/// For far-field microphones such as laptop or conference room microphones
+			case farField = "far_field"
+		}
+
+		/// Type of noise reduction.
+		public var type: NoiseReductionType?
+	}
+
 	public struct TurnDetection: Codable, Equatable, Sendable {
 		public enum TurnDetectionType: String, Codable, Sendable {
 			case serverVad = "server_vad"
+			case semanticVad = "semantic_vad"
 			case none
+		}
+
+		public enum TurnDetectionEagerness: String, Codable, Sendable {
+			case low
+			case high
+			case auto
+			case medium
 		}
 
 		/// The type of turn detection.
 		public var type: TurnDetectionType
-		/// Activation threshold for VAD (0.0 to 1.0).
-		public var threshold: Double
-		/// Amount of audio to include before speech starts (in milliseconds).
-		public var prefixPaddingMs: Int
-		/// Duration of silence to detect speech stop (in milliseconds).
-		public var silenceDurationMs: Int
+		/// Used only for `server_vad` mode. Activation threshold for VAD (0.0 to 1.0).
+		public var threshold: Double?
+		/// Whether or not to automatically interrupt any ongoing response with output to the default conversation (i.e. `conversation` of `auto`) when a VAD start event occurs.
+		public var interruptResponse: Bool?
+		/// Used only for `server_vad` mode. Amount of audio to include before speech starts (in milliseconds).
+		public var prefixPaddingMs: Int?
+		/// Used only for `server_vad` mode. Duration of silence to detect speech stop (in milliseconds).
+		public var silenceDurationMs: Int?
 		/// Whether or not to automatically generate a response when VAD is enabled.
 		public var createResponse: Bool
+		/// Used only for `semantic_vad` mode. The eagerness of the model to respond. `low` will wait longer for the user to continue speaking, `high` will respond more quickly. `auto` is the default and is equivalent to `medium`.
+		public var eagerness: TurnDetectionEagerness?
 
-		public init(
-			type: TurnDetectionType = .serverVad,
-			threshold: Double = 0.5,
-			prefixPaddingMs: Int = 300,
-			silenceDurationMs: Int = 500,
-			createResponse: Bool = true
-		) {
+		public init(type: TurnDetectionType = .serverVad, threshold: Double? = nil, interruptResponse: Bool? = nil, prefixPaddingMs: Int? = nil, silenceDurationMs: Int? = nil, createResponse: Bool = true, eagerness: TurnDetectionEagerness? = nil) {
 			self.type = type
+			self.eagerness = eagerness
 			self.threshold = threshold
 			self.createResponse = createResponse
 			self.prefixPaddingMs = prefixPaddingMs
 			self.silenceDurationMs = silenceDurationMs
+			self.interruptResponse = interruptResponse
 		}
 	}
 
@@ -239,6 +265,8 @@ public struct Session: Codable, Equatable, Sendable {
 	public var outputAudioFormat: AudioFormat
 	/// Configuration for input audio transcription.
 	public var inputAudioTranscription: InputAudioTranscription?
+	/// Configuration for input audio noise reduction.
+	public var inputAudioNoiseReduction: InputAudioNoiseReduction?
 	/// Configuration for turn detection.
 	public var turnDetection: TurnDetection?
 	/// Tools (functions) available to the model.

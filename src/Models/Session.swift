@@ -93,6 +93,14 @@ public struct Session: Codable, Equatable, Sendable {
 			self.silenceDurationMs = silenceDurationMs
 			self.interruptResponse = interruptResponse
 		}
+
+		public static func serverVad(threshold: Double? = nil, interruptResponse: Bool? = nil, prefixPaddingMs: Int? = nil, silenceDurationMs: Int? = nil) -> TurnDetection {
+			.init(type: .serverVad, threshold: threshold, interruptResponse: interruptResponse, prefixPaddingMs: prefixPaddingMs, silenceDurationMs: silenceDurationMs)
+		}
+
+		public static func semanticVad(eagerness: TurnDetectionEagerness = .auto) -> TurnDetection {
+			.init(type: .semanticVad, eagerness: eagerness)
+		}
 	}
 
 	public struct Tool: Codable, Equatable, Sendable {

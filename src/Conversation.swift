@@ -10,6 +10,7 @@ public enum ConversationError: Error {
 public final class Conversation: Sendable {
 	private let client: RealtimeAPI
 	@MainActor private var cancelTask: (() -> Void)?
+	@MainActor private var isInterrupting: Bool = false
 	private let errorStream: AsyncStream<ServerError>.Continuation
 
 	private let audioEngine = AVAudioEngine()
@@ -206,17 +207,17 @@ public extension Conversation {
 	@MainActor func startHandlingVoice() throws {
 		guard !handlingVoice else { return }
 
-		guard let converter = AVAudioConverter(from: audioEngine.inputNode.outputFormat(forBus: 0), to: desiredFormat) else {
-			throw ConversationError.converterInitializationFailed
-		}
-		userConverter.set(converter)
-
 		#if os(iOS)
 		let audioSession = AVAudioSession.sharedInstance()
 		try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
 		try audioSession.setActive(true)
 		#endif
-
+		
+		guard let converter = AVAudioConverter(from: audioEngine.inputNode.outputFormat(forBus: 0), to: desiredFormat) else {
+			throw ConversationError.converterInitializationFailed
+		}
+		userConverter.set(converter)
+		
 		audioEngine.attach(playerNode)
 		audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: converter.inputFormat)
 
@@ -241,6 +242,9 @@ public extension Conversation {
 	/// Interrupt the model's response if it's currently playing.
 	/// This lets the model know that the user didn't hear the full response.
 	@MainActor func interruptSpeech() {
+		guard !isInterrupting else { return }
+		isInterrupting = true
+		
 		if isPlaying,
 		   let nodeTime = playerNode.lastRenderTime,
 		   let playerTime = playerNode.playerTime(forNodeTime: nodeTime),
@@ -259,6 +263,7 @@ public extension Conversation {
 
 		playerNode.stop()
 		queuedSamples.clear()
+		isInterrupting = false
 	}
 
 	/// Stop playing audio responses from the model and listening to the user's microphone.
@@ -419,7 +424,11 @@ private extension Conversation {
 			guard let self else { return }
 
 			self.queuedSamples.popFirst()
-			if self.queuedSamples.isEmpty { playerNode.pause() }
+			if self.queuedSamples.isEmpty {
+				Task { @MainActor in
+					playerNode.pause()
+				}
+			}
 		}
 
 		playerNode.play()

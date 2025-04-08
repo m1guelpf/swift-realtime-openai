@@ -55,6 +55,7 @@ public final class WebSocketConnector: NSObject, Connector, Sendable {
 			switch result {
 				case let .failure(error):
 					self.stream.yield(error: error)
+					task.cancel(with: .goingAway, reason: nil)
 				case let .success(message):
 					switch message {
 						case let .string(text):

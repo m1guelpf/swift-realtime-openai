@@ -56,6 +56,10 @@ public struct Session: Codable, Equatable, Sendable {
 
 		/// Type of noise reduction.
 		public var type: NoiseReductionType?
+
+		public init(type: NoiseReductionType? = nil) {
+			self.type = type
+		}
 	}
 
 	public struct TurnDetection: Codable, Equatable, Sendable {

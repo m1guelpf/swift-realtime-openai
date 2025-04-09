@@ -43,7 +43,13 @@ public final class WebRTCConnector: NSObject, Connector, Sendable {
 		}
 		self.connection = connection
 
-		guard let dataChannel = self.connection.dataChannel(forLabel: "WebRTCData", configuration: RTCDataChannelConfiguration()) else {
+		let audioTrackSource = WebRTCConnector.factory.audioSource(with: nil)
+		let audioTrack = WebRTCConnector.factory.audioTrack(with: audioTrackSource, trackId: "audio0")
+		let mediaStream = WebRTCConnector.factory.mediaStream(withStreamId: "stream0")
+		mediaStream.addAudioTrack(audioTrack)
+		self.connection.add(audioTrack, streamIds: ["stream0"])
+
+		guard let dataChannel = self.connection.dataChannel(forLabel: "oai-events", configuration: RTCDataChannelConfiguration()) else {
 			throw WebRTCError.failedToCreateDataChannel
 		}
 		self.dataChannel = dataChannel
@@ -57,13 +63,19 @@ public final class WebRTCConnector: NSObject, Connector, Sendable {
 
 		var request = request
 
-		let offer = try await self.connection.offer(for: .init(mandatoryConstraints: nil, optionalConstraints: nil))
+		let offer = try await self.connection.offer(for: RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: [
+			"OfferToReceiveAudio": "true",
+			"googEchoCancellation": "true",
+			"googAutoGainControl": "true",
+			"googNoiseSuppression": "true",
+			"googHighpassFilter": "true",
+		]))
 		try await self.connection.setLocalDescription(offer)
 
 		request.httpBody = offer.sdp.data(using: .utf8)
 
 		let (data, res) = try await URLSession.shared.data(for: request)
-		guard (res as? HTTPURLResponse)?.statusCode == 200, let sdp = String(data: data, encoding: .utf8) else {
+		guard let res = res as? HTTPURLResponse, res.statusCode == 201, let sdp = String(data: data, encoding: .utf8) else {
 			throw WebRTCError.badServerResponse
 		}
 

@@ -3,11 +3,12 @@ import Foundation
 import FoundationNetworking
 #endif
 
-public final class WebSocketConnector: NSObject, Connector, Sendable {
+public final class WebSocketConnector: Connector, Sendable {
 	@MainActor public private(set) var onDisconnect: (@Sendable () -> Void)? = nil
 	public let events: AsyncThrowingStream<ServerEvent, Error>
 
-	private let task: URLSessionWebSocketTask
+	private let task: Task<Void, Never>
+	private let webSocket: URLSessionWebSocketTask
 	private let stream: AsyncThrowingStream<ServerEvent, Error>.Continuation
 
 	private let encoder: JSONEncoder = {
@@ -16,70 +17,61 @@ public final class WebSocketConnector: NSObject, Connector, Sendable {
 		return encoder
 	}()
 
-	private let decoder: JSONDecoder = {
-		let decoder = JSONDecoder()
-		decoder.keyDecodingStrategy = .convertFromSnakeCase
-		return decoder
-	}()
-
 	public init(connectingTo request: URLRequest) {
-		(events, stream) = AsyncThrowingStream.makeStream(of: ServerEvent.self)
-		task = URLSession.shared.webSocketTask(with: request)
+		let (events, stream) = AsyncThrowingStream.makeStream(of: ServerEvent.self)
 
-		super.init()
+		let webSocket = URLSession.shared.webSocketTask(with: request)
+		webSocket.resume()
 
-		task.delegate = self
-		receiveMessage()
-		task.resume()
+		task = Task.detached { [webSocket, stream] in
+			var isActive = true
+
+			let decoder = JSONDecoder()
+			decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+			while isActive, webSocket.closeCode == .invalid, !Task.isCancelled {
+				guard webSocket.closeCode == .invalid else {
+					stream.finish()
+					isActive = false
+					break
+				}
+
+				do {
+					let message = try await webSocket.receive()
+
+					guard case let .string(text) = message, let data = text.data(using: .utf8) else {
+						stream.yield(error: RealtimeAPIError.invalidMessage)
+						continue
+					}
+
+					try stream.yield(decoder.decode(ServerEvent.self, from: data))
+				} catch {
+					stream.yield(error: error)
+					isActive = false
+				}
+			}
+
+			webSocket.cancel(with: .goingAway, reason: nil)
+		}
+
+		self.events = events
+		self.stream = stream
+		self.webSocket = webSocket
 	}
 
 	deinit {
-		task.cancel(with: .goingAway, reason: nil)
+		webSocket.cancel(with: .goingAway, reason: nil)
+		task.cancel()
 		stream.finish()
 		onDisconnect?()
 	}
 
 	public func send(event: ClientEvent) async throws {
 		let message = try URLSessionWebSocketTask.Message.string(String(data: encoder.encode(event), encoding: .utf8)!)
-		try await task.send(message)
+		try await webSocket.send(message)
 	}
 
 	@MainActor public func onDisconnect(_ action: (@Sendable () -> Void)?) {
 		onDisconnect = action
-	}
-
-	private func receiveMessage() {
-		task.receive { [weak self] result in
-			guard let self else { return }
-
-			switch result {
-				case let .failure(error):
-					self.stream.yield(error: error)
-					task.cancel(with: .goingAway, reason: nil)
-				case let .success(message):
-					switch message {
-						case let .string(text):
-							self.stream.yield(with: Result { try self.decoder.decode(ServerEvent.self, from: text.data(using: .utf8)!) })
-
-						case .data:
-							self.stream.yield(error: RealtimeAPIError.invalidMessage)
-
-						@unknown default:
-							self.stream.yield(error: RealtimeAPIError.invalidMessage)
-					}
-			}
-
-			self.receiveMessage()
-		}
-	}
-}
-
-extension WebSocketConnector: URLSessionWebSocketDelegate {
-	public func urlSession(_: URLSession, webSocketTask _: URLSessionWebSocketTask, didCloseWith _: URLSessionWebSocketTask.CloseCode, reason _: Data?) {
-		stream.finish()
-
-		Task { @MainActor in
-			onDisconnect?()
-		}
 	}
 }

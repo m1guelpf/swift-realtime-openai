@@ -184,8 +184,8 @@ public extension Conversation {
 		guard !isListening else { return }
 		if !handlingVoice { try startHandlingVoice() }
 
-		Task.detached {
-			self.audioEngine.inputNode.installTap(onBus: 0, bufferSize: 4096, format: self.audioEngine.inputNode.outputFormat(forBus: 0)) { [weak self] buffer, _ in
+		Task.detached { [audioEngine] in
+			audioEngine.inputNode.installTap(onBus: 0, bufferSize: 4096, format: audioEngine.inputNode.outputFormat(forBus: 0)) { [weak self] buffer, _ in
 				self?.processAudioBufferFromUser(buffer: buffer)
 			}
 		}
@@ -206,12 +206,6 @@ public extension Conversation {
 	@MainActor func startHandlingVoice() throws {
 		guard !handlingVoice else { return }
 
-		#if os(iOS)
-		let audioSession = AVAudioSession.sharedInstance()
-		try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
-		try audioSession.setActive(true)
-		#endif
-
 		guard let converter = AVAudioConverter(from: audioEngine.inputNode.outputFormat(forBus: 0), to: desiredFormat) else {
 			throw ConversationError.converterInitializationFailed
 		}
@@ -227,6 +221,13 @@ public extension Conversation {
 		audioEngine.prepare()
 		do {
 			try audioEngine.start()
+
+			#if os(iOS)
+			let audioSession = AVAudioSession.sharedInstance()
+			try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
+			try audioSession.setActive(true)
+			#endif
+
 			handlingVoice = true
 		} catch {
 			print("Failed to enable audio engine: \(error)")
@@ -251,7 +252,7 @@ public extension Conversation {
 		{
 			let audioTimeInMiliseconds = Int((Double(playerTime.sampleTime) / playerTime.sampleRate) * 1000)
 
-			Task {
+			Task { [client] in
 				do {
 					try await client.send(event: .truncateConversationItem(forItem: itemID, atAudioMs: audioTimeInMiliseconds))
 				} catch {
@@ -263,6 +264,15 @@ public extension Conversation {
 		playerNode.stop()
 		queuedSamples.clear()
 		isInterrupting = false
+	}
+
+	@MainActor func stopHandlingVoice() {
+		guard handlingVoice else { return }
+
+		Self.cleanUpAudio(playerNode: playerNode, audioEngine: audioEngine)
+
+		isListening = false
+		handlingVoice = false
 	}
 
 	/// Stop playing audio responses from the model and listening to the user's microphone.
@@ -283,15 +293,6 @@ public extension Conversation {
 			audioEngine.reset()
 		}
 		#endif
-	}
-
-	@MainActor func stopHandlingVoice() {
-		guard handlingVoice else { return }
-
-		Self.cleanUpAudio(playerNode: playerNode, audioEngine: audioEngine)
-
-		isListening = false
-		handlingVoice = false
 	}
 }
 

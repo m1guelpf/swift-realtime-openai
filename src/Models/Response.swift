@@ -57,6 +57,25 @@ public struct Response: Identifiable, Codable, Equatable, Sendable {
 		public let totalTokens: Int
 		public let inputTokens: Int
 		public let outputTokens: Int
+		public let inputTokenDetails: InputTokenDetails
+		public let outputTokenDetails: OutputTokenDetails
+
+		public struct InputTokenDetails: Codable, Equatable, Sendable {
+			public let textTokens: Int
+			public let audioTokens: Int
+			public let cachedTokens: Int
+			public let cachedTokensDetails: CachedTokensDetails
+
+			public struct CachedTokensDetails: Codable, Equatable, Sendable {
+				public let textTokens: Int
+				public let audioTokens: Int
+			}
+		}
+
+		public struct OutputTokenDetails: Codable, Equatable, Sendable {
+			public let textTokens: Int
+			public let audioTokens: Int
+		}
 	}
 
 	/// The unique ID of the response.

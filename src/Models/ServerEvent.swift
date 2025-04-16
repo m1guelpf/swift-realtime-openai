@@ -119,6 +119,20 @@ public enum ServerEvent: Sendable {
 		public let itemId: String
 	}
 
+	public struct OutputAudioBufferStartedEvent: Decodable, Sendable {
+		/// The unique ID of the server event.
+		public let eventId: String
+		/// The ID of the response.
+		public let responseId: String
+	}
+
+	public struct OutputAudioBufferStoppedEvent: Decodable, Sendable {
+		/// The unique ID of the server event.
+		public let eventId: String
+		/// The ID of the response.
+		public let responseId: String
+	}
+
 	public struct ResponseEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let eventId: String
@@ -342,6 +356,10 @@ public enum ServerEvent: Sendable {
 	case conversationItemTruncated(ConversationItemTruncatedEvent)
 	/// Returned when an item in the conversation is deleted.
 	case conversationItemDeleted(ConversationItemDeletedEvent)
+	/// Returned when the output audio buffer is started.
+	case outputAudioBufferStarted(OutputAudioBufferStartedEvent)
+	/// Returned when the output audio buffer is stopped.
+	case outputAudioBufferStopped(OutputAudioBufferStoppedEvent)
 	/// Returned when a new Response is created. The first event of response creation, where the response is in an initial state of "in_progress".
 	case responseCreated(ResponseEvent)
 	/// Returned when a Response is done streaming. Always emitted, no matter the final state.
@@ -404,6 +422,10 @@ extension ServerEvent: Identifiable {
 			case let .conversationItemTruncated(event):
 				return event.eventId
 			case let .conversationItemDeleted(event):
+				return event.eventId
+			case let .outputAudioBufferStarted(event):
+				return event.eventId
+			case let .outputAudioBufferStopped(event):
 				return event.eventId
 			case let .responseCreated(event):
 				return event.eventId
@@ -477,6 +499,10 @@ extension ServerEvent: Decodable {
 				self = try .conversationItemTruncated(ConversationItemTruncatedEvent(from: decoder))
 			case "conversation.item.deleted":
 				self = try .conversationItemDeleted(ConversationItemDeletedEvent(from: decoder))
+			case "output_audio_buffer.started":
+				self = try .outputAudioBufferStarted(OutputAudioBufferStartedEvent(from: decoder))
+			case "output_audio_buffer.stopped":
+				self = try .outputAudioBufferStopped(OutputAudioBufferStoppedEvent(from: decoder))
 			case "response.created":
 				self = try .responseCreated(ResponseEvent(from: decoder))
 			case "response.done":

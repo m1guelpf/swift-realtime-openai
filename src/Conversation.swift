@@ -512,5 +512,5 @@ extension Conversation {
 
 public extension Conversation {
     /// Forward-only stream of all server events for this conversation.
-    var eventsStream: AsyncStream<ServerEvent> { client.events }
+    var eventsStream: AsyncThrowingStream<ServerEvent, Error> { client.events }
 }

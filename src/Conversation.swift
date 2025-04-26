@@ -517,10 +517,10 @@ public extension Conversation {
 
 extension Conversation {
     // Add a notification name
-    static let responseCompletedNotification = Notification.Name("ResponseCompletedNotification")
+    public static let responseCompletedNotification = Notification.Name("ResponseCompletedNotification")
     
     // Use this method to broadcast when a response is completed and we have usage data
-    func broadcastResponseCompletion(_ response: Response) {
+    public func broadcastResponseCompletion(_ response: Response) {
         DispatchQueue.main.async {
             NotificationCenter.default.post(
                 name: Self.responseCompletedNotification,

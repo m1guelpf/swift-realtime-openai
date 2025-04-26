@@ -514,3 +514,19 @@ public extension Conversation {
     /// Forward-only stream of all server events for this conversation.
     var eventsStream: AsyncThrowingStream<ServerEvent, Error> { client.events }
 }
+
+extension Conversation {
+    // Add a notification name
+    static let responseCompletedNotification = Notification.Name("ResponseCompletedNotification")
+    
+    // Use this method to broadcast when a response is completed and we have usage data
+    func broadcastResponseCompletion(_ response: Response) {
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(
+                name: Self.responseCompletedNotification,
+                object: self,
+                userInfo: ["response": response]
+            )
+        }
+    }
+}

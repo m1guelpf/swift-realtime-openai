@@ -377,7 +377,9 @@ private extension Conversation {
 
 					message = newMessage
 				}
-				if let fullResponse = event.response, fullResponse.usage != nil {
+			case let .responseDone(event):
+				let fullResponse = event.response
+				if fullResponse.usage != nil {
 					self.broadcastResponseCompletion(fullResponse)
 				}
 			default:

@@ -17,11 +17,11 @@ jobs:
             - name: Build
               run: ./.github/build.sh
 
-            - run: zip -r ./OpenAI.xcframework.zip ./OpenAI.xcframework
+            - run: zip -r ./OpenAIRealtime.xcframework.zip ./OpenAIRealtime.xcframework
 
             - name: Upload artifact to Emerge
               uses: EmergeTools/emerge-upload-action@v1.1.0
               with:
                   build_type: release
-                  artifact_path: ./OpenAI.xcframework.zip
+                  artifact_path: ./OpenAIRealtime.xcframework.zip
                   emerge_api_key: ${{ secrets.EMERGE_API_KEY }}

@@ -79,6 +79,17 @@ public enum ServerEvent: Sendable {
 		public let transcript: String
 	}
 
+	public struct ConversationItemInputAudioTranscriptionDeltaEvent: Decodable, Sendable {
+		/// The unique ID of the server event.
+		public let eventId: String
+		/// The ID of the user message item.
+		public let itemId: String
+		/// The index of the content part containing the audio.
+		public let contentIndex: Int
+		/// The transcribed delta text.
+		public let delta: String
+	}
+
 	public struct ConversationItemInputAudioTranscriptionFailedEvent: Decodable, Sendable {
 		/// The unique ID of the server event.
 		public let eventId: String
@@ -106,6 +117,20 @@ public enum ServerEvent: Sendable {
 		public let eventId: String
 		/// The ID of the item that was deleted.
 		public let itemId: String
+	}
+
+	public struct OutputAudioBufferStartedEvent: Decodable, Sendable {
+		/// The unique ID of the server event.
+		public let eventId: String
+		/// The ID of the response.
+		public let responseId: String
+	}
+
+	public struct OutputAudioBufferStoppedEvent: Decodable, Sendable {
+		/// The unique ID of the server event.
+		public let eventId: String
+		/// The ID of the response.
+		public let responseId: String
 	}
 
 	public struct ResponseEvent: Decodable, Sendable {
@@ -323,12 +348,18 @@ public enum ServerEvent: Sendable {
 	case conversationItemCreated(ConversationItemCreatedEvent)
 	/// Returned when input audio transcription is enabled and a transcription succeeds.
 	case conversationItemInputAudioTranscriptionCompleted(ConversationItemInputAudioTranscriptionCompletedEvent)
+	/// Returned when input audio transcription is enabled and a transcription receives delta.
+	case conversationItemInputAudioTranscriptionDelta(ConversationItemInputAudioTranscriptionDeltaEvent)
 	/// Returned when input audio transcription is configured, and a transcription request for a user message failed.
 	case conversationItemInputAudioTranscriptionFailed(ConversationItemInputAudioTranscriptionFailedEvent)
 	/// Returned when an earlier assistant audio message item is truncated by the client.
 	case conversationItemTruncated(ConversationItemTruncatedEvent)
 	/// Returned when an item in the conversation is deleted.
 	case conversationItemDeleted(ConversationItemDeletedEvent)
+	/// Returned when the output audio buffer is started.
+	case outputAudioBufferStarted(OutputAudioBufferStartedEvent)
+	/// Returned when the output audio buffer is stopped.
+	case outputAudioBufferStopped(OutputAudioBufferStoppedEvent)
 	/// Returned when a new Response is created. The first event of response creation, where the response is in an initial state of "in_progress".
 	case responseCreated(ResponseEvent)
 	/// Returned when a Response is done streaming. Always emitted, no matter the final state.
@@ -384,11 +415,17 @@ extension ServerEvent: Identifiable {
 				return event.eventId
 			case let .conversationItemInputAudioTranscriptionCompleted(event):
 				return event.eventId
+			case let .conversationItemInputAudioTranscriptionDelta(event):
+				return event.eventId
 			case let .conversationItemInputAudioTranscriptionFailed(event):
 				return event.eventId
 			case let .conversationItemTruncated(event):
 				return event.eventId
 			case let .conversationItemDeleted(event):
+				return event.eventId
+			case let .outputAudioBufferStarted(event):
+				return event.eventId
+			case let .outputAudioBufferStopped(event):
 				return event.eventId
 			case let .responseCreated(event):
 				return event.eventId
@@ -454,12 +491,18 @@ extension ServerEvent: Decodable {
 				self = try .conversationItemCreated(ConversationItemCreatedEvent(from: decoder))
 			case "conversation.item.input_audio_transcription.completed":
 				self = try .conversationItemInputAudioTranscriptionCompleted(ConversationItemInputAudioTranscriptionCompletedEvent(from: decoder))
+			case "conversation.item.input_audio_transcription.delta":
+				self = try .conversationItemInputAudioTranscriptionDelta(ConversationItemInputAudioTranscriptionDeltaEvent(from: decoder))
 			case "conversation.item.input_audio_transcription.failed":
 				self = try .conversationItemInputAudioTranscriptionFailed(ConversationItemInputAudioTranscriptionFailedEvent(from: decoder))
 			case "conversation.item.truncated":
 				self = try .conversationItemTruncated(ConversationItemTruncatedEvent(from: decoder))
 			case "conversation.item.deleted":
 				self = try .conversationItemDeleted(ConversationItemDeletedEvent(from: decoder))
+			case "output_audio_buffer.started":
+				self = try .outputAudioBufferStarted(OutputAudioBufferStartedEvent(from: decoder))
+			case "output_audio_buffer.stopped":
+				self = try .outputAudioBufferStopped(OutputAudioBufferStoppedEvent(from: decoder))
 			case "response.created":
 				self = try .responseCreated(ResponseEvent(from: decoder))
 			case "response.done":

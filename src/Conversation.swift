@@ -1,6 +1,6 @@
+@preconcurrency import WebRTC
 import Foundation
 @preconcurrency import AVFoundation
-@preconcurrency import WebRTC
 
 public enum ConversationError: Error {
 	case sessionNotFound
@@ -8,11 +8,12 @@ public enum ConversationError: Error {
 }
 
 @Observable
-public final class Conversation: Sendable {
+public final class Conversation: @unchecked Sendable {
 	private let client: RealtimeAPI
-	@MainActor private var cancelTask: (() -> Void)?
+	@MainActor private var isInterrupting: Bool = false
 	private let errorStream: AsyncStream<ServerError>.Continuation
 
+	private var task: Task<Void, Error>!
 	private let audioEngine = AVAudioEngine()
 	private let playerNode = AVAudioPlayerNode()
 	private let queuedSamples = UnsafeMutableArray<String>()
@@ -20,8 +21,8 @@ public final class Conversation: Sendable {
 	private let userConverter = UnsafeInteriorMutable<AVAudioConverter>()
 	private let desiredFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 24000, channels: 1, interleaved: false)!
 
-  public func getClient() -> RealtimeAPI { return client }
-  
+	public func getClient() -> RealtimeAPI { return client }
+
 	/// A stream of errors that occur during the conversation.
 	public let errors: AsyncStream<ServerError>
 
@@ -63,21 +64,20 @@ public final class Conversation: Sendable {
 		self.client = client
 		(errors, errorStream) = AsyncStream.makeStream(of: ServerError.self)
 
-		let task = Task.detached { [weak self] in
-			guard let self else { return }
+		let events = client.events
+		task = Task.detached { [weak self] in
+			for try await event in events {
+				guard !Task.isCancelled else { break }
 
-			for try await event in client.events {
-				await self.handleEvent(event)
+				await self?.handleEvent(event)
 			}
 
-			await MainActor.run {
-				self.connected = false
+			await MainActor.run { [weak self] in
+				self?.connected = false
 			}
 		}
 
 		Task { @MainActor in
-			self.cancelTask = task.cancel
-
 			client.onDisconnect = { [weak self] in
 				guard let self else { return }
 
@@ -91,36 +91,35 @@ public final class Conversation: Sendable {
 	}
 
 	deinit {
+		task.cancel()
 		errorStream.finish()
 
-		DispatchQueue.main.asyncAndWait {
-			cancelTask?()
-			stopHandlingVoice()
+		Task { [playerNode, audioEngine] in
+			Self.cleanUpAudio(playerNode: playerNode, audioEngine: audioEngine)
 		}
 	}
 
 	/// Create a new conversation providing an API token and, optionally, a model.
-  public convenience init(authToken token: String) {
-    let model = "gpt-4o-realtime-preview-2024-12-17"
-    
-    // use websocket
-    print("webSocket initalization...")
-    self.init(client: RealtimeAPI.webSocket(authToken: token, model: model))
+	public convenience init(authToken token: String) {
+		let model = "gpt-4o-realtime-preview-2024-12-17"
+
+		// use websocket
+		print("webSocket initalization...")
+		self.init(client: RealtimeAPI.webSocket(authToken: token, model: model))
 	}
 
-  public convenience init(authToken token: String, webRTC: Bool) async {
-    let model = "gpt-4o-realtime-preview-2024-12-17"
+	public convenience init(authToken token: String, webRTC _: Bool) async {
+		let model = "gpt-4o-realtime-preview-2024-12-17"
 
-    // use webrtc
-    do {
-      await try self.init(client: RealtimeAPI.webRTC(authToken: token, model: model))
-    }
-    catch {
-        print("Exception - webRTC init failed: \(error). \nFalling back to webSocket...")
-        self.init(client: RealtimeAPI.webSocket(authToken: token, model: model))
-    }
-  }
-  
+		// use webrtc
+		do {
+			await try self.init(client: RealtimeAPI.webRTC(authToken: token, model: model))
+		} catch {
+			print("Exception - webRTC init failed: \(error). \nFalling back to webSocket...")
+			self.init(client: RealtimeAPI.webSocket(authToken: token, model: model))
+		}
+	}
+
 	/// Create a new conversation that connects using a custom `URLRequest`.
 	public convenience init(connectingTo request: URLRequest) {
 		self.init(client: RealtimeAPI.webSocket(connectingTo: request))
@@ -204,15 +203,15 @@ public extension Conversation {
 		guard !isListening else { return }
 		if !handlingVoice { try startHandlingVoice() }
 
-		Task.detached {
-			self.audioEngine.inputNode.installTap(onBus: 0, bufferSize: 4096, format: self.audioEngine.inputNode.outputFormat(forBus: 0)) { [weak self] buffer, _ in
+		Task.detached { [audioEngine] in
+			audioEngine.inputNode.installTap(onBus: 0, bufferSize: 4096, format: audioEngine.inputNode.outputFormat(forBus: 0)) { [weak self] buffer, _ in
 				self?.processAudioBufferFromUser(buffer: buffer)
 			}
 		}
 
 		isListening = true
 	}
-  
+
 	/// Stop listening to the user's microphone.
 	/// This won't stop playing back model responses. To fully stop handling voice conversations, call `stopHandlingVoice`.
 	@MainActor func stopListening() {
@@ -223,55 +222,56 @@ public extension Conversation {
 	}
 
 	/// Handle the playback of audio responses from the model.
-  @MainActor func startHandlingVoice() throws {
-    guard !handlingVoice else { return }
-    
-    guard let converter = AVAudioConverter(from: audioEngine.inputNode.outputFormat(forBus: 0), to: desiredFormat) else {
-      throw ConversationError.converterInitializationFailed
-    }
-    userConverter.set(converter)
+	@MainActor func startHandlingVoice() throws {
+		guard !handlingVoice else { return }
 
-    audioEngine.attach(playerNode)
-    
-    let compatibleFormat = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1)
-    audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: compatibleFormat)
-    
-    
-    #if os(iOS)
-    do {
-      try audioEngine.inputNode.setVoiceProcessingEnabled(true)
-    } catch {
-        print("Failed to setVoiceProcessingEnabled: \(error.localizedDescription)")
-    }
-    #endif
+		guard let converter = AVAudioConverter(from: audioEngine.inputNode.outputFormat(forBus: 0), to: desiredFormat) else {
+			throw ConversationError.converterInitializationFailed
+		}
+		userConverter.set(converter)
 
-    audioEngine.prepare()
-    do {
-      try audioEngine.start()
+		audioEngine.attach(playerNode)
 
-      
-      #if os(iOS)
-      let audioSession = AVAudioSession.sharedInstance()
-      try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
-      try audioSession.setPreferredSampleRate(44100)
-      try audioSession.setActive(true)
+		let compatibleFormat = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1)
+		audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: compatibleFormat)
 
-      #endif
-            
-      handlingVoice = true
-    } catch {
-      print("Failed to enable audio engine: \(error)")
+		#if os(iOS)
+		do {
+			try audioEngine.inputNode.setVoiceProcessingEnabled(true)
+		} catch {
+			print("Failed to setVoiceProcessingEnabled: \(error.localizedDescription)")
+		}
+		#endif
 
-      audioEngine.disconnectNodeInput(playerNode)
-      audioEngine.disconnectNodeOutput(playerNode)
+		audioEngine.prepare()
+		do {
+			try audioEngine.start()
 
-      throw error
-    }
-  }
+			#if os(iOS)
+			let audioSession = AVAudioSession.sharedInstance()
+			try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
+			try audioSession.setPreferredSampleRate(44100)
+			try audioSession.setActive(true)
+
+			#endif
+
+			handlingVoice = true
+		} catch {
+			print("Failed to enable audio engine: \(error)")
+
+			audioEngine.disconnectNodeInput(playerNode)
+			audioEngine.disconnectNodeOutput(playerNode)
+
+			throw error
+		}
+	}
 
 	/// Interrupt the model's response if it's currently playing.
 	/// This lets the model know that the user didn't hear the full response.
 	@MainActor func interruptSpeech() {
+		guard !isInterrupting else { return }
+		isInterrupting = true
+
 		if isPlaying,
 		   let nodeTime = playerNode.lastRenderTime,
 		   let playerTime = playerNode.playerTime(forNodeTime: nodeTime),
@@ -279,7 +279,7 @@ public extension Conversation {
 		{
 			let audioTimeInMiliseconds = Int((Double(playerTime.sampleTime) / playerTime.sampleRate) * 1000)
 
-			Task {
+			Task { [client] in
 				do {
 					try await client.send(event: .truncateConversationItem(forItem: itemID, atAudioMs: audioTimeInMiliseconds))
 				} catch {
@@ -290,11 +290,22 @@ public extension Conversation {
 
 		playerNode.stop()
 		queuedSamples.clear()
+		isInterrupting = false
+	}
+
+	@MainActor func stopHandlingVoice() {
+		guard handlingVoice else { return }
+
+		Self.cleanUpAudio(playerNode: playerNode, audioEngine: audioEngine)
+
+		isListening = false
+		handlingVoice = false
 	}
 
 	/// Stop playing audio responses from the model and listening to the user's microphone.
-	@MainActor func stopHandlingVoice() {
-		guard handlingVoice else { return }
+	static func cleanUpAudio(playerNode: AVAudioPlayerNode, audioEngine: AVAudioEngine) {
+		// If attachedNodes does not contain the playerNode then `startHandlingVoice` was never called
+		guard audioEngine.attachedNodes.contains(playerNode) else { return }
 
 		audioEngine.inputNode.removeTap(onBus: 0)
 		audioEngine.stop()
@@ -309,9 +320,6 @@ public extension Conversation {
 			audioEngine.reset()
 		}
 		#endif
-
-		isListening = false
-		handlingVoice = false
 	}
 }
 
@@ -390,12 +398,12 @@ private extension Conversation {
 				if handlingVoice { interruptSpeech() }
 			case .inputAudioBufferSpeechStopped:
 				isUserSpeaking = false
-            case let .responseOutputItemDone(event):
-                updateEvent(id: event.item.id) { message in
-                    guard case let .message(newMessage) = event.item else { return }
-                    
-                    message = newMessage
-                }
+			case let .responseOutputItemDone(event):
+				updateEvent(id: event.item.id) { message in
+					guard case let .message(newMessage) = event.item else { return }
+
+					message = newMessage
+				}
 			default:
 				return
 		}
@@ -450,7 +458,11 @@ private extension Conversation {
 			guard let self else { return }
 
 			self.queuedSamples.popFirst()
-			if self.queuedSamples.isEmpty { playerNode.pause() }
+			if self.queuedSamples.isEmpty {
+				Task { @MainActor in
+					playerNode.pause()
+				}
+			}
 		}
 
 		playerNode.play()
@@ -513,12 +525,14 @@ extension Conversation {
 	/// This is because updating the `queuedSamples` array on a background thread will trigger a re-render of any views that depend on it on that thread.
 	/// So, instead, we observe the property and update `isPlaying` on the main actor.
 	private func _keepIsPlayingPropertyUpdated() {
-		withObservationTracking { _ = queuedSamples.isEmpty } onChange: {
+		withObservationTracking { _ = queuedSamples.isEmpty } onChange: { [weak self] in
 			Task { @MainActor in
+				guard let self else { return }
+
 				self.isPlaying = self.queuedSamples.isEmpty
 			}
 
-			self._keepIsPlayingPropertyUpdated()
+			self?._keepIsPlayingPropertyUpdated()
 		}
 	}
 }

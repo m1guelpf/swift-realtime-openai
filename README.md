@@ -1,6 +1,6 @@
 # A modern Swift SDK for OpenAI's Realtime API
 
-[![Install Size](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fwww.emergetools.com%2Fapi%2Fv2%2Fpublic_new_build%3FexampleId%3Dswift-realtime-openai.OpenAI%26platform%3Dios%26badgeOption%3Dmax_install_size_only%26buildType%3Drelease&query=$.badgeMetadata&label=OpenAI&logo=apple)](https://www.emergetools.com/app/example/ios/swift-realtime-openai.OpenAI/release)
+[![Install Size](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fwww.emergetools.com%2Fapi%2Fv2%2Fpublic_new_build%3FexampleId%3Dswift-realtime-openai.OpenAIRealtime%26platform%3Dios%26badgeOption%3Dmax_install_size_only%26buildType%3Drelease&query=$.badgeMetadata&label=OpenAI&logo=apple)](https://www.emergetools.com/app/example/ios/swift-realtime-openai.OpenAIRealtime/release)
 [![Swift Version](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fm1guelpf%2Fswift-realtime-openai%2Fbadge%3Ftype%3Dswift-versions&color=brightgreen)](https://swiftpackageindex.com/m1guelpf/swift-realtime-openai)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/m1guelpf/swift-realtime-openai/main/LICENSE)
 
@@ -37,8 +37,8 @@ dependencies: [
 You can build an iMessage-like app with built-in AI chat in less than 60 lines of code (UI included!):
 
 ```swift
-import OpenAI
 import SwiftUI
+import OpenAIRealtime
 
 struct ContentView: View {
 	@State private var newMessage: String = ""
@@ -103,8 +103,8 @@ struct ContentView: View {
 Or, if you just want a simple app that lets the user talk and the AI respond:
 
 ```swift
-import OpenAI
 import SwiftUI
+import OpenAIRealtime
 
 struct ContentView: View {
 	@State private var conversation = Conversation(authToken: OPENAI_KEY)

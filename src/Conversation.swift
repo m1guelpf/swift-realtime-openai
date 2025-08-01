@@ -206,27 +206,34 @@ public extension Conversation {
 	@MainActor func startHandlingVoice() throws {
 		guard !handlingVoice else { return }
 
-		guard let converter = AVAudioConverter(from: audioEngine.inputNode.outputFormat(forBus: 0), to: desiredFormat) else {
+#if os(iOS)
+		// 1️⃣ Configure and activate the session first
+		let audioSession = AVAudioSession.sharedInstance()
+		try audioSession.setCategory(.playAndRecord,
+		                             mode: .voiceChat,
+		                             options: [.defaultToSpeaker, .allowBluetooth])
+		try audioSession.setPreferredSampleRate(48_000)   // optional but typical
+		try audioSession.setActive(true)
+#endif
+
+		// 2️⃣ Now the format has a real sample-rate
+		let hwFormat = audioEngine.inputNode.outputFormat(forBus: 0)
+		guard let converter = AVAudioConverter(from: hwFormat, to: desiredFormat) else {
 			throw ConversationError.converterInitializationFailed
 		}
 		userConverter.set(converter)
 
 		audioEngine.attach(playerNode)
-		audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: converter.inputFormat)
+		// letting the engine pick a format avoids future mismatches
+		audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: nil)
 
-		#if os(iOS)
+#if os(iOS)
 		try audioEngine.inputNode.setVoiceProcessingEnabled(true)
-		#endif
+#endif
 
 		audioEngine.prepare()
 		do {
 			try audioEngine.start()
-
-			#if os(iOS)
-			let audioSession = AVAudioSession.sharedInstance()
-			try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
-			try audioSession.setActive(true)
-			#endif
 
 			handlingVoice = true
 		} catch {

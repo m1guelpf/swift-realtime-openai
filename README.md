@@ -36,11 +36,11 @@ You can build an iMessage-like app with built-in AI chat in less than 60 lines o
 
 ```swift
 import SwiftUI
-import OpenAIRealtime
+import RealtimeAPI
 
 struct ContentView: View {
 	@State private var newMessage: String = ""
-	@State private var conversation = Conversation(authToken: OPENAI_KEY)
+	@State private var conversation = try! Conversation()
 
 	var messages: [Item.Message] {
 		conversation.entries.compactMap { switch $0 {
@@ -84,7 +84,7 @@ struct ContentView: View {
 		}
 		.navigationTitle("Chat")
 		.navigationBarTitleDisplayMode(.inline)
-		.onAppear { try! conversation.startHandlingVoice() }
+		.task { try! await conversation..connect(ephemeralKey: YOUR_EPHEMERAL_KEY_HERE) }
 	}
 
 	func sendMessage() {
@@ -102,32 +102,24 @@ Or, if you just want a simple app that lets the user talk and the AI respond:
 
 ```swift
 import SwiftUI
-import OpenAIRealtime
+import RealtimeAPI
 
 struct ContentView: View {
-	@State private var conversation = Conversation(authToken: OPENAI_KEY)
+	@State private var conversation = try! Conversation()
 
 	var body: some View {
 		Text("Say something!")
-			.onAppear { try! conversation.startListening() }
+			.task { try! await conversation..connect(ephemeralKey: YOUR_EPHEMERAL_KEY_HERE) }
 	}
 }
 ```
 
-## Features
-
--   [x] A simple interface for directly interacting with the API
--   [x] Wrap the API in an interface that manages the conversation for you
--   [x] Optionally handle recording the user's mic and sending it to the API
--   [x] Optionally handle playing model responses as they stream in
--   [x] Allow interrupting the model
--   [ ] WebRTC support
 
 ## Architecture
 
 ### `Conversation`
 
-The `Conversation` class provides a high-level interface for managing a conversation with the model. It wraps the `RealtimeAPI` class and handles the details of sending and receiving messages, as well as managing the conversation history. It can optionally also handle recording the user's mic and sending it to the API, as well as playing model responses as they stream in.
+The `Conversation` class provides a high-level interface for managing a conversation with the model. It wraps the `RealtimeAPI` class and handles the details of sending and receiving messages, managing the conversation history, recording the user's mic, and playing model responses as they stream in.
 
 #### Reading messages
 
@@ -166,12 +158,6 @@ try await conversation.whenConnected {
 }
 ```
 
-#### Handling voice conversations
-
-The `Conversation` class can automatically handle 2-way voice conversations. Calling `startListening()` will start listening to the user's voice and sending it to the model, and playing back the model's responses. Calling `stopListening()` will stop listening, but continue playing back responses.
-
-If you just want to play model responses, call `startHandlingVoice()`. To stop both listening and playing back responses, call `stopHandlingVoice()`.
-
 #### Manually sending messages
 
 To send a text message, call the `send(from: Item.ItemRole, text: String, response: Response.Config? = nil)` providing the role of the sender (`.user`, `.assistant`, or `.system`) and the contents of the message. You can optionally also provide a `Response.Config` object to customize the response, such as enabling or disabling function calls.
@@ -187,8 +173,8 @@ To manually send an event to the API, use the `send(event: RealtimeAPI.ClientEve
 To interact with the API directly, create a new instance of `RealtimeAPI` providing one of the available connectors. There are helper methods that let you create an instance from an apiKey or a `URLRequest`, like so:
 
 ```swift
-let api = RealtimeAPI.webSocket(authToken: YOUR_OPENAI_API_KEY, model: String = "gpt-4o-realtime-preview") // or RealtimeAPI.webSocket(connectingTo: URLRequest)
-let api = RealtimeAPI.webRTC(authToken: YOUR_OPENAI_API_KEY, model: String = "gpt-4o-realtime-preview") // or RealtimeAPI.webRTC(connectingTo: URLRequest)
+let api = RealtimeAPI.webRTC(ephemeralKey: YOUR_EPHEMERAL_KEY, model: .gptRealtime) // or RealtimeAPI.webRTC(connectingTo: URLRequest)
+let api = RealtimeAPI.webSocket(authToken: YOUR_OPENAI_API_KEY, model: .gptRealtime) // or RealtimeAPI.webSocket(connectingTo: URLRequest)
 ```
 
 You can listen for new events through the `events` property, like so:

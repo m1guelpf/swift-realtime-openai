@@ -1,0 +1,64 @@
+name: Docs
+
+on:
+    push:
+        tags: ['*']
+        branches: [main]
+
+jobs:
+    build:
+        runs-on: macos-latest
+        steps:
+            - uses: swift-actions/setup-swift@v2
+
+            - uses: actions/checkout@v4
+
+            - name: Restore .build
+              id: restore-build
+              uses: actions/cache/restore@v4
+              with:
+                path: .build
+                restore-keys: "swiftpm-docs-build-${{ runner.os }}-"
+                key: "swiftpm-docs-build-${{ runner.os }}-${{ github.event.pull_request.base.sha || github.event.after }}"
+
+            - name: Generate documentation
+              run: |
+                swift package --allow-writing-to-directory ./RealtimeAPI.doccarchive generate-documentation --target RealtimeAPI --disable-indexing --experimental-documentation-coverage --diagnostic-filter error --output-path ./RealtimeAPI.doccarchive
+                tar -cf RealtimeAPI.doccarchive.tar ./RealtimeAPI.doccarchive/data ./RealtimeAPI.doccarchive/index ./RealtimeAPI.doccarchive/metadata.json ./RealtimeAPI.doccarchive/documentation-coverage.json
+
+            - name: Cache .build
+              if: steps.restore-build.outputs.cache-hit != 'true'
+              uses: actions/cache/save@v4
+              with:
+                path: .build
+                key: "swiftpm-docs-build-${{ runner.os }}-${{ github.event.pull_request.base.sha || github.event.after }}"
+
+            - name: Update latest documentation
+              id: github-pages
+              if: github.ref_type != 'tag'
+              uses: actions/upload-artifact@v4
+              with:
+                retention-days: 1
+                name: github-pages
+                if-no-files-found: error
+                path: ./RealtimeAPI.doccarchive.tar
+
+            - name: Attach to release
+              if: github.ref_type == 'tag'
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: ./RealtimeAPI.doccarchive.tar
+    deploy:
+      needs: build
+      runs-on: ubuntu-latest
+      if: github.ref_type != 'tag'
+      permissions:
+         pages: write
+         id-token: write
+      environment:
+         name: github-pages
+         url: ${{ steps.deployment.outputs.page_url }}
+      steps:
+          - name: Deploy to GitHub Pages
+            id: deployment
+            uses: actions/deploy-pages@v4

@@ -4,12 +4,11 @@ import FoundationNetworking
 #endif
 
 public protocol Connector: Sendable {
+	@MainActor var status: RealtimeAPI.Status { get }
 	var events: AsyncThrowingStream<ServerEvent, Error> { get }
-	@MainActor var onDisconnect: (@Sendable () -> Void)? { get }
 
-	init(connectingTo request: URLRequest) async throws
+	static func create(connectingTo request: URLRequest) async throws -> Self
 
+	func disconnect()
 	func send(event: ClientEvent) async throws
-
-	@MainActor func onDisconnect(_ action: (@Sendable () -> Void)?)
 }

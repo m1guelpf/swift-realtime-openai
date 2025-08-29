@@ -1,11 +1,12 @@
+import Core
 import Foundation
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
 
-public final class WebSocketConnector: Connector, Sendable {
-	@MainActor public private(set) var onDisconnect: (@Sendable () -> Void)? = nil
+public final class WebSocketConnector: NSObject, Connector, Sendable {
 	public let events: AsyncThrowingStream<ServerEvent, Error>
+	@MainActor public private(set) var status = RealtimeAPI.Status.connecting
 
 	private let task: Task<Void, Never>
 	private let webSocket: URLSessionWebSocketTask
@@ -17,11 +18,14 @@ public final class WebSocketConnector: Connector, Sendable {
 		return encoder
 	}()
 
-	public init(connectingTo request: URLRequest) {
+	private init(connectingTo request: URLRequest) {
 		let (events, stream) = AsyncThrowingStream.makeStream(of: ServerEvent.self)
 
 		let webSocket = URLSession.shared.webSocketTask(with: request)
-		webSocket.resume()
+
+		self.events = events
+		self.stream = stream
+		self.webSocket = webSocket
 
 		task = Task.detached { [webSocket, stream] in
 			var isActive = true
@@ -40,13 +44,13 @@ public final class WebSocketConnector: Connector, Sendable {
 					let message = try await webSocket.receive()
 
 					guard case let .string(text) = message, let data = text.data(using: .utf8) else {
-						stream.yield(error: RealtimeAPIError.invalidMessage)
+						stream.finish(throwing: RealtimeAPI.Error.invalidMessage)
 						continue
 					}
 
 					try stream.yield(decoder.decode(ServerEvent.self, from: data))
 				} catch {
-					stream.yield(error: error)
+					stream.finish(throwing: error)
 					isActive = false
 				}
 			}
@@ -54,16 +58,18 @@ public final class WebSocketConnector: Connector, Sendable {
 			webSocket.cancel(with: .goingAway, reason: nil)
 		}
 
-		self.events = events
-		self.stream = stream
-		self.webSocket = webSocket
+		super.init()
+
+		webSocket.delegate = self
+		webSocket.resume()
 	}
 
 	deinit {
-		webSocket.cancel(with: .goingAway, reason: nil)
-		task.cancel()
-		stream.finish()
-		onDisconnect?()
+		self.disconnect()
+	}
+
+	public static func create(connectingTo request: URLRequest) async throws -> WebSocketConnector {
+		return self.init(connectingTo: request)
 	}
 
 	public func send(event: ClientEvent) async throws {
@@ -71,7 +77,24 @@ public final class WebSocketConnector: Connector, Sendable {
 		try await webSocket.send(message)
 	}
 
-	@MainActor public func onDisconnect(_ action: (@Sendable () -> Void)?) {
-		onDisconnect = action
+	public func disconnect() {
+		webSocket.cancel(with: .goingAway, reason: nil)
+		task.cancel()
+		stream.finish()
+		status = .disconnected
+	}
+}
+
+extension WebSocketConnector: URLSessionWebSocketDelegate {
+	public func urlSession(_: URLSession, webSocketTask _: URLSessionWebSocketTask, didOpenWithProtocol _: String?) {
+		Task { @MainActor in
+			status = .connected
+		}
+	}
+
+	public func urlSession(_: URLSession, webSocketTask _: URLSessionWebSocketTask, didCloseWith _: URLSessionWebSocketTask.CloseCode, reason _: Data?) {
+		Task { @MainActor in
+			status = .disconnected
+		}
 	}
 }

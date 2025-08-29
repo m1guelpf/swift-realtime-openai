@@ -30,18 +30,18 @@ public struct Response: Identifiable, Codable, Equatable, Sendable {
 		/// Input items to include in the prompt for the model. Creates a new context for this response, without including the default conversation. Can include references to items from the default conversation.
 		public let input: [Item]?
 
-		public init(modalities: [Session.Modality] = [.text, .audio], instructions: String, voice: Session.Voice = .alloy, outputAudioFormat: Session.AudioFormat = .pcm16, tools: [Session.Tool] = [], toolChoice: Session.ToolChoice = .auto, temperature: Double = 1, maxResponseOutputTokens: Int? = nil, conversation: Conversation? = .auto, metadata: [String: String]? = nil, input: [Item]? = nil) {
-			self.input = input
-			self.voice = voice
-			self.tools = tools
-			self.metadata = metadata
-			self.toolChoice = toolChoice
+		public init(modalities: [Session.Modality], instructions: String, voice: Session.Voice, outputAudioFormat: Session.AudioFormat, tools: [Session.Tool], toolChoice: Session.ToolChoice, temperature: Double, maxResponseOutputTokens: Int?, conversation: Conversation?, metadata: [String: String]?, input: [Item]?) {
 			self.modalities = modalities
-			self.temperature = temperature
 			self.instructions = instructions
-			self.conversation = conversation
+			self.voice = voice
 			self.outputAudioFormat = outputAudioFormat
+			self.tools = tools
+			self.toolChoice = toolChoice
+			self.temperature = temperature
 			self.maxResponseOutputTokens = maxResponseOutputTokens
+			self.conversation = conversation
+			self.metadata = metadata
+			self.input = input
 		}
 	}
 

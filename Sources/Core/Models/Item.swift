@@ -13,7 +13,7 @@ public enum Item: Identifiable, Equatable, Sendable {
 		case assistant
 	}
 
-	public struct Audio: Equatable, Sendable {
+	public struct Audio: Equatable, Hashable, Sendable {
 		/// Base64-encoded audio bytes.
 		public var audio: Data
 		/// The transcript of the audio.
@@ -25,7 +25,7 @@ public enum Item: Identifiable, Equatable, Sendable {
 		}
 	}
 
-	public enum ContentPart: Equatable, Sendable {
+	public enum ContentPart: Equatable, Hashable, Sendable {
 		case text(String)
 		case audio(Audio)
 	}
@@ -178,7 +178,7 @@ extension Item: Codable {
 	}
 }
 
-extension Item.Audio: Decodable {
+extension Item.Audio: Codable {
 	private enum CodingKeys: String, CodingKey {
 		case audio
 		case transcript
@@ -198,9 +198,15 @@ extension Item.Audio: Decodable {
 			audio = Data()
 		}
 	}
+
+	public func encode(to encoder: Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(transcript, forKey: .transcript)
+		try container.encode(audio.base64EncodedString(), forKey: .audio)
+	}
 }
 
-extension Item.ContentPart: Decodable {
+extension Item.ContentPart: Codable {
 	private enum CodingKeys: String, CodingKey {
 		case type
 		case text
@@ -228,6 +234,20 @@ extension Item.ContentPart: Decodable {
 				self = try .audio(Item.Audio(from: decoder))
 			default:
 				throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown content type: \(type)")
+		}
+	}
+
+	public func encode(to encoder: Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+
+		switch self {
+			case let .text(text):
+				try container.encode(text, forKey: .text)
+				try container.encode("text", forKey: .type)
+			case let .audio(audio):
+				try container.encode("audio", forKey: .type)
+				try container.encode(audio.transcript, forKey: .transcript)
+				try container.encode(audio.audio.base64EncodedString(), forKey: .audio)
 		}
 	}
 }

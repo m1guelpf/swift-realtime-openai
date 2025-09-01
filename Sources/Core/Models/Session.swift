@@ -86,36 +86,34 @@ import HelperCoders
 			}
 
 			/// Configuration for input audio noise reduction.
-			@Codable @CodedAt("type") public enum NoiseReduction: CaseIterable, Equatable, Hashable, Sendable {
+			public enum NoiseReduction: String, CaseIterable, Equatable, Hashable, Sendable {
 				/// For close-talking microphones such as headphones
-				@CodedAs("near_field")
-				case nearField
+				case nearField = "near_field"
 
 				/// For far-field microphones such as laptop or conference room microphones
-				@CodedAs("far_field")
-				case farField
+				case farField = "far_field"
 			}
 
 			/// Configuration for turn detection
 			public struct TurnDetection: Codable, Equatable, Hashable, Sendable {
 				/// The type of turn detection.
-				public enum TurnDetectionType: String, Codable, Equatable, Hashable, Sendable {
-					case serverVad = "server_vad"
-					case semanticVad = "semantic_vad"
+				public enum VAD: String, Codable, Equatable, Hashable, Sendable {
+					case server = "server_vad"
+					case semantic = "semantic_vad"
 				}
 
 				/// The eagerness of the model to respond.
-				public enum TurnDetectionEagerness: String, CaseIterable, Equatable, Hashable, Codable, Sendable {
+				public enum Eagerness: String, CaseIterable, Equatable, Hashable, Codable, Sendable {
 					case auto, low, medium, high
 				}
 
 				/// Whether or not to automatically generate a response when a VAD stop event occurs.
 				public var createResponse: Bool
 
-				/// Used only for `semanticVad` mode. The eagerness of the model to respond.
+				/// Used only for `semantic` mode. The eagerness of the model to respond.
 				///
 				/// `low` will wait longer for the user to continue speaking, `high` will respond more quickly. `auto` is the default and is equivalent to `medium`.
-				public var eagerness: TurnDetectionEagerness?
+				public var eagerness: Eagerness?
 
 				/// Optional idle timeout after which turn detection will auto-timeout when no additional audio is received.
 				public var idleTimeout: Int?
@@ -123,37 +121,37 @@ import HelperCoders
 				/// Whether or not to automatically interrupt any ongoing response with output to the default conversation (i.e. `conversation` of `auto`) when a VAD start event occurs.
 				public var interruptResponse: Bool?
 
-				/// Used only for `serverVad` mode. Amount of audio to include before speech starts (in milliseconds).
+				/// Used only for `server` mode. Amount of audio to include before speech starts (in milliseconds).
 				///
 				/// Defaults to `300ms`.
 				public var prefixPaddingMs: Int?
 
-				/// Used only for `serverVad` mode. Duration of silence to detect speech stop (in milliseconds).
+				/// Used only for `server` mode. Duration of silence to detect speech stop (in milliseconds).
 				///
 				/// Defaults to `500ms`.
 				///
 				/// With shorter values the model will respond more quickly, but may jump in on short pauses from the user.
 				public var silenceDurationMs: Int?
 
-				/// Used only for `serverVad` mode. Activation threshold for VAD (0.0 to 1.0).
+				/// Used only for `server` mode. Activation threshold for VAD (0.0 to 1.0).
 				///
 				/// A higher threshold will require louder audio to activate the model, and thus might perform better in noisy environments.
 				public var threshold: Double?
 
 				/// The type of turn detection.
-				public var type: TurnDetectionType
+				public var type: VAD
 
 				/// Creates a new `TurnDetection` configuration.
 				///
 				/// - Parameter createResponse: Whether or not to automatically generate a response when a VAD stop event occurs.
-				/// - Parameter eagerness: Only for `semanticVad` mode. The eagerness of the model to respond.
+				/// - Parameter eagerness: Only for `semantic` mode. The eagerness of the model to respond.
 				/// - Parameter idleTimeout: Optional idle timeout after which turn detection will auto-timeout when no additional audio is received.
 				/// - Parameter interruptResponse: Whether or not to automatically interrupt any ongoing response with output to the default conversation when a VAD start event occurs.
-				/// - Parameter prefixPaddingMs: Only for `serverVad` mode. Amount of audio to include before speech starts (in milliseconds).
-				/// - Parameter silenceDurationMs: Only for `serverVad` mode. Duration of silence to detect speech stop (in milliseconds).
-				/// - Parameter threshold: Only for `serverVad` mode. Activation threshold for VAD (0.0 to 1.0).
+				/// - Parameter prefixPaddingMs: Only for `server` mode. Amount of audio to include before speech starts (in milliseconds).
+				/// - Parameter silenceDurationMs: Only for `server` mode. Duration of silence to detect speech stop (in milliseconds).
+				/// - Parameter threshold: Only for `server` mode. Activation threshold for VAD (0.0 to 1.0).
 				/// - Parameter type: The type of turn detection.
-				public init(createResponse: Bool = true, eagerness: TurnDetectionEagerness? = nil, idleTimeout: Int? = nil, interruptResponse: Bool? = nil, prefixPaddingMs: Int? = nil, silenceDurationMs: Int? = nil, threshold: Double? = nil, type: TurnDetectionType = .serverVad) {
+				public init(createResponse: Bool = true, eagerness: Eagerness? = nil, idleTimeout: Int? = nil, interruptResponse: Bool? = nil, prefixPaddingMs: Int? = nil, silenceDurationMs: Int? = nil, threshold: Double? = nil, type: VAD = .server) {
 					self.createResponse = createResponse
 					self.eagerness = eagerness
 					self.idleTimeout = idleTimeout
@@ -173,7 +171,7 @@ import HelperCoders
 				/// - Parameter silenceDurationMs: Duration of silence to detect speech stop (in milliseconds).
 				/// - Parameter threshold: Activation threshold for VAD (0.0 to 1.0).
 				public static func serverVad(createResponse: Bool = true, idleTimeout: Int? = nil, interruptResponse: Bool? = nil, prefixPaddingMs: Int? = nil, silenceDurationMs: Int? = nil, threshold: Double? = nil) -> TurnDetection {
-					.init(createResponse: createResponse, eagerness: nil, idleTimeout: idleTimeout, interruptResponse: interruptResponse, prefixPaddingMs: prefixPaddingMs, silenceDurationMs: silenceDurationMs, threshold: threshold, type: .serverVad)
+					.init(createResponse: createResponse, eagerness: nil, idleTimeout: idleTimeout, interruptResponse: interruptResponse, prefixPaddingMs: prefixPaddingMs, silenceDurationMs: silenceDurationMs, threshold: threshold, type: .server)
 				}
 
 				/// Creates a new `TurnDetection` configuration for Semantic VAD.
@@ -182,8 +180,8 @@ import HelperCoders
 				/// - Parameter eagerness: The eagerness of the model to respond.
 				/// - Parameter idleTimeout: Optional idle timeout after which turn detection will auto-timeout when no additional audio is received.
 				/// - Parameter interruptResponse: Whether or not to automatically interrupt any ongoing response with output to the default conversation when a VAD start event occurs.
-				public static func semanticVad(createResponse: Bool = true, eagerness: TurnDetectionEagerness? = .auto, idleTimeout: Int? = nil, interruptResponse: Bool? = nil) -> TurnDetection {
-					.init(createResponse: createResponse, eagerness: eagerness, idleTimeout: idleTimeout, interruptResponse: interruptResponse, prefixPaddingMs: nil, silenceDurationMs: nil, threshold: nil, type: .semanticVad)
+				public static func semanticVad(createResponse: Bool = true, eagerness: Eagerness? = .auto, idleTimeout: Int? = nil, interruptResponse: Bool? = nil) -> TurnDetection {
+					.init(createResponse: createResponse, eagerness: eagerness, idleTimeout: idleTimeout, interruptResponse: interruptResponse, prefixPaddingMs: nil, silenceDurationMs: nil, threshold: nil, type: .semantic)
 				}
 			}
 
@@ -216,6 +214,19 @@ import HelperCoders
 			///
 			/// This can be useful for more natural conversations, but may have a higher latency.
 			public var turnDetection: TurnDetection?
+
+			/// Creates a new `Input` configuration.
+			///
+			/// - Parameter format: The format of input audio.
+			/// - Parameter noiseReduction: Configuration for input audio noise reduction.
+			/// - Parameter transcription: Configuration for input audio transcription.
+			/// - Parameter turnDetection: Configuration for turn detection, either Server VAD or Semantic VAD.
+			public init(format: AudioFormat, noiseReduction: NoiseReduction? = nil, transcription: Transcription? = nil, turnDetection: TurnDetection? = nil) {
+				self.format = format
+				self.transcription = transcription
+				self.turnDetection = turnDetection
+				self.noiseReduction = noiseReduction
+			}
 		}
 
 		/// Configuration for output audio.
@@ -234,6 +245,17 @@ import HelperCoders
 
 			/// The format of output audio.
 			public var format: AudioFormat
+
+			/// Creates a new `Output` configuration.
+			///
+			/// - Parameter voice: The voice the model uses to respond.
+			/// - Parameter speed: The speed of the model's spoken response.
+			/// - Parameter format: The format of output audio.
+			public init(voice: Voice, speed: Double, format: AudioFormat) {
+				self.voice = voice
+				self.speed = speed
+				self.format = format
+			}
 		}
 
 		/// Configuration for input audio.
@@ -249,168 +271,6 @@ import HelperCoders
 		public init(input: Input, output: Output) {
 			self.input = input
 			self.output = output
-		}
-	}
-
-	public struct Tool: Codable, Equatable, Hashable, Sendable {
-		public struct FunctionParameters: Codable, Equatable, Hashable, Sendable {
-			public var type: JSONType
-			public var properties: [String: Property]?
-			public var required: [String]?
-			public var pattern: String?
-			public var const: String?
-			public var `enum`: [String]?
-			public var multipleOf: Int?
-			public var minimum: Int?
-			public var maximum: Int?
-
-			public init(
-				type: JSONType,
-				properties: [String: Property]? = nil,
-				required: [String]? = nil,
-				pattern: String? = nil,
-				const: String? = nil,
-				enum: [String]? = nil,
-				multipleOf: Int? = nil,
-				minimum: Int? = nil,
-				maximum: Int? = nil
-			) {
-				self.type = type
-				self.properties = properties
-				self.required = required
-				self.pattern = pattern
-				self.const = const
-				self.enum = `enum`
-				self.multipleOf = multipleOf
-				self.minimum = minimum
-				self.maximum = maximum
-			}
-
-			public struct Property: Codable, Equatable, Hashable, Sendable {
-				public var type: JSONType
-				public var description: String?
-				public var format: String?
-				public var items: Items?
-				public var required: [String]?
-				public var pattern: String?
-				public var const: String?
-				public var `enum`: [String]?
-				public var multipleOf: Int?
-				public var minimum: Double?
-				public var maximum: Double?
-				public var minItems: Int?
-				public var maxItems: Int?
-				public var uniqueItems: Bool?
-
-				public init(
-					type: JSONType,
-					description: String? = nil,
-					format: String? = nil,
-					items: Self.Items? = nil,
-					required: [String]? = nil,
-					pattern: String? = nil,
-					const: String? = nil,
-					enum: [String]? = nil,
-					multipleOf: Int? = nil,
-					minimum: Double? = nil,
-					maximum: Double? = nil,
-					minItems: Int? = nil,
-					maxItems: Int? = nil,
-					uniqueItems: Bool? = nil
-				) {
-					self.type = type
-					self.description = description
-					self.format = format
-					self.items = items
-					self.required = required
-					self.pattern = pattern
-					self.const = const
-					self.enum = `enum`
-					self.multipleOf = multipleOf
-					self.minimum = minimum
-					self.maximum = maximum
-					self.minItems = minItems
-					self.maxItems = maxItems
-					self.uniqueItems = uniqueItems
-				}
-
-				public struct Items: Codable, Equatable, Hashable, Sendable {
-					public var type: JSONType
-					public var properties: [String: Property]?
-					public var pattern: String?
-					public var const: String?
-					public var `enum`: [String]?
-					public var multipleOf: Int?
-					public var minimum: Double?
-					public var maximum: Double?
-					public var minItems: Int?
-					public var maxItems: Int?
-					public var uniqueItems: Bool?
-
-					public init(
-						type: JSONType,
-						properties: [String: Property]? = nil,
-						pattern: String? = nil,
-						const: String? = nil,
-						enum: [String]? = nil,
-						multipleOf: Int? = nil,
-						minimum: Double? = nil,
-						maximum: Double? = nil,
-						minItems: Int? = nil,
-						maxItems: Int? = nil,
-						uniqueItems: Bool? = nil
-					) {
-						self.type = type
-						self.properties = properties
-						self.pattern = pattern
-						self.const = const
-						self.enum = `enum`
-						self.multipleOf = multipleOf
-						self.minimum = minimum
-						self.maximum = maximum
-						self.minItems = minItems
-						self.maxItems = maxItems
-						self.uniqueItems = uniqueItems
-					}
-				}
-			}
-
-			public enum JSONType: String, Codable, Equatable, Hashable, Sendable {
-				case integer
-				case string
-				case boolean
-				case array
-				case object
-				case number
-				case null
-			}
-		}
-
-		/// The type of the tool.
-		public var type: String = "function"
-		/// The name of the function.
-		public var name: String
-		/// The description of the function.
-		public var description: String
-		/// Parameters of the function in JSON Schema.
-		public var parameters: FunctionParameters
-
-		public init(type: String = "function", name: String, description: String, parameters: FunctionParameters) {
-			self.type = type
-			self.name = name
-			self.description = description
-			self.parameters = parameters
-		}
-	}
-
-	public enum ToolChoice: Equatable, Hashable, Sendable {
-		case auto
-		case none
-		case required
-		case function(String)
-
-		public init(function name: String) {
-			self = .function(name)
 		}
 	}
 
@@ -453,78 +313,44 @@ import HelperCoders
 	public var temperature: Double?
 
 	/// How the model chooses tools.
-	public var toolChoice: ToolChoice?
+	public var toolChoice: Tool.Choice?
 
 	/// Tools available to the model.
 	public var tools: [Tool]?
 
-	public init(expiresAt: Date, id: String? = nil, audio: Audio, instructions: String, maxResponseOutputTokens: MaxResponseOutputTokens? = nil, modalities: [Modality]? = nil, model: Model, prompt: Prompt? = nil, temperature: Double? = nil, toolChoice: ToolChoice? = nil, tools: [Tool]? = nil) {
-		self.expiresAt = expiresAt
+	public init(expiresAt: Date, id: String? = nil, audio: Audio, instructions: String, maxResponseOutputTokens: MaxResponseOutputTokens? = nil, modalities: [Modality]? = nil, model: Model, prompt: Prompt? = nil, temperature: Double? = nil, toolChoice: Tool.Choice? = nil, tools: [Tool]? = nil) {
 		self.id = id
+		self.tools = tools
+		self.model = model
 		self.audio = audio
+		self.prompt = prompt
+		self.expiresAt = expiresAt
+		self.toolChoice = toolChoice
+		self.modalities = modalities
+		self.temperature = temperature
 		self.instructions = instructions
 		self.maxResponseOutputTokens = maxResponseOutputTokens
-		self.modalities = modalities
-		self.model = model
-		self.prompt = prompt
-		self.temperature = temperature
-		self.toolChoice = toolChoice
-		self.tools = tools
 	}
 }
 
-extension Session.ToolChoice: Codable {
-	private enum FunctionCall: Codable {
+extension Session.Audio.Input.NoiseReduction: Codable {
+	private enum CodingKeys: String, CodingKey {
 		case type
-		case function
+	}
 
-		enum CodingKeys: CodingKey {
-			case type
-			case function
-		}
+	public func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(rawValue, forKey: .type)
 	}
 
 	public init(from decoder: any Decoder) throws {
-		let container = try decoder.singleValueContainer()
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		let type = try container.decode(String.self, forKey: .type)
 
-		if let stringValue = try? container.decode(String.self) {
-			switch stringValue {
-				case "none":
-					self = .none
-				case "auto":
-					self = .auto
-				case "required":
-					self = .required
-				default:
-					throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid value for enum.")
-			}
-		} else {
-			let container = try decoder.container(keyedBy: FunctionCall.CodingKeys.self)
-			let functionContainer = try container.decode([String: String].self, forKey: .function)
-
-			guard let name = functionContainer["name"] else {
-				throw DecodingError.dataCorruptedError(forKey: .function, in: container, debugDescription: "Missing function name.")
-			}
-
-			self = .function(name)
+		guard let value = Self(rawValue: type) else {
+			throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown noise reduction type: \(type)")
 		}
-	}
 
-	public func encode(to encoder: Encoder) throws {
-		switch self {
-			case .none:
-				var container = encoder.singleValueContainer()
-				try container.encode("none")
-			case .auto:
-				var container = encoder.singleValueContainer()
-				try container.encode("auto")
-			case .required:
-				var container = encoder.singleValueContainer()
-				try container.encode("required")
-			case let .function(name):
-				var container = encoder.container(keyedBy: FunctionCall.CodingKeys.self)
-				try container.encode("function", forKey: .type)
-				try container.encode(["name": name], forKey: .function)
-		}
+		self = value
 	}
 }

@@ -138,13 +138,13 @@ public final class Conversation: @unchecked Sendable {
 	/// Optionally, you can provide a response configuration to customize the model's behavior.
 	/// > Note: Calling this function will automatically call `interruptSpeech` if the model is currently speaking.
 	public func send(from role: Item.ItemRole, text: String, response: Response.Config? = nil) async throws {
-		try await send(event: .createConversationItem(Item(message: Item.Message(id: String(randomLength: 32), from: role, content: [.input_text(text)]))))
-		try await send(event: .createResponse(response))
+		try await send(event: .createConversationItem(.message(Item.Message(id: String(randomLength: 32), from: role, content: [.input_text(text)]))))
+		try await send(event: .createResponse(using: response))
 	}
 
 	/// Send the response of a function call.
 	public func send(result output: Item.FunctionCallOutput) async throws {
-		try await send(event: .createConversationItem(Item(with: output)))
+		try await send(event: .createConversationItem(.functionCallOutput(output)))
 	}
 }
 
@@ -170,40 +170,40 @@ private extension Conversation {
 				}
 			case let .conversationItemInputAudioTranscriptionFailed(_, _, _, error):
 				errorStream.yield(error)
-			case let .responseContentPartAdded(_, _, itemId, outputIndex, contentIndex, part):
+			case let .responseContentPartAdded(_, _, itemId, _, contentIndex, part):
 				updateEvent(id: itemId) { message in
 					message.content.insert(.init(from: part), at: contentIndex)
 				}
-			case let .responseContentPartDone(_, _, itemId, outputIndex, contentIndex, part):
+			case let .responseContentPartDone(_, _, itemId, _, contentIndex, part):
 				updateEvent(id: itemId) { message in
 					message.content[contentIndex] = .init(from: part)
 				}
-			case let .responseTextDelta(_, _, itemId, outputIndex, contentIndex, delta):
+			case let .responseTextDelta(_, _, itemId, _, contentIndex, delta):
 				updateEvent(id: itemId) { message in
 					guard case let .text(text) = message.content[contentIndex] else { return }
 
 					message.content[contentIndex] = .text(text + delta)
 				}
-			case let .responseTextDone(_, _, itemId, outputIndex, contentIndex, text):
+			case let .responseTextDone(_, _, itemId, _, contentIndex, text):
 				updateEvent(id: itemId) { message in
 					message.content[contentIndex] = .text(text)
 				}
-			case let .responseAudioTranscriptDelta(_, _, itemId, outputIndex, contentIndex, delta):
+			case let .responseAudioTranscriptDelta(_, _, itemId, _, contentIndex, delta):
 				updateEvent(id: itemId) { message in
 					guard case let .audio(audio) = message.content[contentIndex] else { return }
 
 					message.content[contentIndex] = .audio(.init(audio: audio.audio, transcript: (audio.transcript ?? "") + delta))
 				}
-			case let .responseAudioTranscriptDone(_, _, itemId, outputIndex, contentIndex, transcript):
+			case let .responseAudioTranscriptDone(_, _, itemId, _, contentIndex, transcript):
 				updateEvent(id: itemId) { message in
 					guard case let .audio(audio) = message.content[contentIndex] else { return }
 
 					message.content[contentIndex] = .audio(.init(audio: audio.audio, transcript: transcript))
 				}
-			case let .responseOutputAudioDelta(_, _, itemId, outputIndex, contentIndex, delta):
+			case let .responseOutputAudioDelta(_, _, itemId, _, contentIndex, delta):
 				updateEvent(id: itemId) { message in
 					guard case let .audio(audio) = message.content[contentIndex] else { return }
-					message.content[contentIndex] = .audio(.init(audio: audio.audio + delta.data, transcript: audio.transcript))
+					message.content[contentIndex] = .audio(.init(audio: audio.audio.data + delta.data, transcript: audio.transcript))
 				}
 			case let .responseFunctionCallArgumentsDelta(_, _, itemId, _, _, delta):
 				updateEvent(id: itemId) { functionCall in
@@ -217,7 +217,7 @@ private extension Conversation {
 				isUserSpeaking = true
 			case .inputAudioBufferSpeechStopped:
 				isUserSpeaking = false
-			case let .responseOutputItemDone(_, _, outputIndex, item):
+			case let .responseOutputItemDone(_, _, _, item):
 				updateEvent(id: item.id) { message in
 					guard case let .message(newMessage) = item else { return }
 

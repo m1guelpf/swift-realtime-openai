@@ -1,27 +1,29 @@
 import Foundation
+import MetaCodable
 
-public enum Item: Identifiable, Equatable, Sendable {
-	public enum ItemStatus: String, Codable, Sendable {
-		case completed
-		case in_progress
-		case incomplete
+@Codable @CodedAt("type") public enum Item: Identifiable, Equatable, Hashable, Sendable {
+	public enum ItemStatus: String, Equatable, Hashable, Codable, Sendable {
+		case completed, incomplete, inProgress = "in_progress"
 	}
 
-	public enum ItemRole: String, Codable, Sendable {
-		case user
-		case system
-		case assistant
+	public enum ItemRole: String, Equatable, Hashable, Codable, Sendable {
+		case system, assistant, user
 	}
 
-	public struct Audio: Equatable, Hashable, Sendable {
-		/// Base64-encoded audio bytes.
-		public var audio: Data
-		/// The transcript of the audio.
+	public struct Audio: Equatable, Hashable, Codable, Sendable {
+		/// Audio bytes
+		public var audio: AudioData
+
+		/// The transcript of the audio
 		public var transcript: String?
 
-		public init(audio: Data = Data(), transcript: String? = nil) {
+		public init(audio: AudioData, transcript: String? = nil) {
 			self.audio = audio
 			self.transcript = transcript
+		}
+
+		public init(audio: Data = Data(), transcript: String? = nil) {
+			self.init(audio: AudioData(data: audio), transcript: transcript)
 		}
 	}
 
@@ -30,8 +32,8 @@ public enum Item: Identifiable, Equatable, Sendable {
 		case audio(Audio)
 	}
 
-	public struct Message: Identifiable, Codable, Equatable, Sendable {
-		public enum Content: Equatable, Sendable {
+	public struct Message: Identifiable, Equatable, Hashable, Codable, Sendable {
+		public enum Content: Equatable, Hashable, Sendable {
 			case text(String)
 			case audio(Audio)
 			case input_text(String)
@@ -39,26 +41,23 @@ public enum Item: Identifiable, Equatable, Sendable {
 
 			public var text: String? {
 				switch self {
-					case let .text(text):
-						return text
-					case let .input_text(text):
-						return text
-					case let .input_audio(audio):
-						return audio.transcript
-					case let .audio(audio):
-						return audio.transcript
+					case let .text(text): text
+					case let .input_text(text): text
+					case let .audio(audio): audio.transcript
+					case let .input_audio(audio): audio.transcript
 				}
 			}
 		}
 
 		/// The unique ID of the item.
 		public var id: String
-		/// The type of the item
-		private var type: String = "message"
+
 		/// The status of the item
 		public var status: ItemStatus
+
 		/// The role associated with the item
 		public var role: ItemRole
+
 		/// The content of the message.
 		public var content: [Content]
 
@@ -70,28 +69,30 @@ public enum Item: Identifiable, Equatable, Sendable {
 		}
 	}
 
-	public struct FunctionCall: Identifiable, Codable, Equatable, Sendable {
+	public struct FunctionCall: Identifiable, Equatable, Hashable, Codable, Sendable {
 		/// The unique ID of the item.
 		public var id: String
-		/// The type of the item
-		private var type: String = "function_call"
+
 		/// The status of the item
 		public var status: ItemStatus
+
 		/// The ID of the function call
 		public var callId: String
+
 		/// The name of the function being called
 		public var name: String
+
 		/// The arguments of the function call
 		public var arguments: String
 	}
 
-	public struct FunctionCallOutput: Identifiable, Codable, Equatable, Sendable {
+	public struct FunctionCallOutput: Identifiable, Equatable, Hashable, Codable, Sendable {
 		/// The unique ID of the item.
 		public var id: String
-		/// The type of the item
-		private var type: String = "function_call_output"
+
 		/// The ID of the function call
 		public var callId: String
+
 		/// The output of the function call
 		public var output: String
 
@@ -103,30 +104,19 @@ public enum Item: Identifiable, Equatable, Sendable {
 	}
 
 	case message(Message)
+
+	@CodedAs("function_call")
 	case functionCall(FunctionCall)
+
+	@CodedAs("function_call_output")
 	case functionCallOutput(FunctionCallOutput)
 
 	public var id: String {
 		switch self {
-			case let .message(message):
-				return message.id
-			case let .functionCall(functionCall):
-				return functionCall.id
-			case let .functionCallOutput(functionCallOutput):
-				return functionCallOutput.id
+			case let .message(message): message.id
+			case let .functionCall(functionCall): functionCall.id
+			case let .functionCallOutput(functionCallOutput): functionCallOutput.id
 		}
-	}
-
-	public init(message: Message) {
-		self = .message(message)
-	}
-
-	public init(calling functionCall: FunctionCall) {
-		self = .functionCall(functionCall)
-	}
-
-	public init(with functionCallOutput: FunctionCallOutput) {
-		self = .functionCallOutput(functionCallOutput)
 	}
 }
 
@@ -135,76 +125,13 @@ public enum Item: Identifiable, Equatable, Sendable {
 public extension Item.Message.Content {
 	init(from part: Item.ContentPart) {
 		switch part {
-			case let .audio(audio):
-				self = .audio(audio)
-			case let .text(text):
-				self = .text(text)
+			case let .text(text): self = .text(text)
+			case let .audio(audio): self = .audio(audio)
 		}
 	}
 }
 
 // MARK: Codable implementations
-
-extension Item: Codable {
-	private enum CodingKeys: String, CodingKey {
-		case type
-	}
-
-	public init(from decoder: any Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		let type = try container.decode(String.self, forKey: .type)
-
-		switch type {
-			case "message":
-				self = try .message(Message(from: decoder))
-			case "function_call":
-				self = try .functionCall(FunctionCall(from: decoder))
-			case "function_call_output":
-				self = try .functionCallOutput(FunctionCallOutput(from: decoder))
-			default:
-				throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown item type: \(type)")
-		}
-	}
-
-	public func encode(to encoder: Encoder) throws {
-		switch self {
-			case let .message(message):
-				try message.encode(to: encoder)
-			case let .functionCall(functionCall):
-				try functionCall.encode(to: encoder)
-			case let .functionCallOutput(functionCallOutput):
-				try functionCallOutput.encode(to: encoder)
-		}
-	}
-}
-
-extension Item.Audio: Codable {
-	private enum CodingKeys: String, CodingKey {
-		case audio
-		case transcript
-	}
-
-	public init(from decoder: any Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		transcript = try container.decodeIfPresent(String.self, forKey: .transcript)
-		let encodedAudio = try container.decodeIfPresent(String.self, forKey: .audio)
-
-		if let encodedAudio {
-			guard let decodedAudio = Data(base64Encoded: encodedAudio) else {
-				throw DecodingError.dataCorruptedError(forKey: .audio, in: container, debugDescription: "Invalid base64-encoded audio data.")
-			}
-			audio = decodedAudio
-		} else {
-			audio = Data()
-		}
-	}
-
-	public func encode(to encoder: Encoder) throws {
-		var container = encoder.container(keyedBy: CodingKeys.self)
-		try container.encode(transcript, forKey: .transcript)
-		try container.encode(audio.base64EncodedString(), forKey: .audio)
-	}
-}
 
 extension Item.ContentPart: Codable {
 	private enum CodingKeys: String, CodingKey {
@@ -247,7 +174,7 @@ extension Item.ContentPart: Codable {
 			case let .audio(audio):
 				try container.encode("audio", forKey: .type)
 				try container.encode(audio.transcript, forKey: .transcript)
-				try container.encode(audio.audio.base64EncodedString(), forKey: .audio)
+				try container.encode(audio.audio, forKey: .audio)
 		}
 	}
 }
@@ -300,12 +227,12 @@ extension Item.Message.Content: Codable {
 				try container.encode("input_text", forKey: .type)
 			case let .audio(audio):
 				try container.encode("audio", forKey: .type)
+				try container.encode(audio.audio, forKey: .audio)
 				try container.encode(audio.transcript, forKey: .transcript)
-				try container.encode(audio.audio.base64EncodedString(), forKey: .audio)
 			case let .input_audio(audio):
+				try container.encode(audio.audio, forKey: .audio)
 				try container.encode("input_audio", forKey: .type)
 				try container.encode(audio.transcript, forKey: .transcript)
-				try container.encode(audio.audio.base64EncodedString(), forKey: .audio)
 		}
 	}
 }

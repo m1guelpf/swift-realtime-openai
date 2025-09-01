@@ -8,7 +8,6 @@ let package = Package(
 		.iOS(.v17),
 		.tvOS(.v17),
 		.macOS(.v14),
-		.watchOS(.v10),
 		.visionOS(.v1),
 		.macCatalyst(.v17),
 	],
@@ -16,8 +15,8 @@ let package = Package(
 		.library(name: "RealtimeAPI", targets: ["RealtimeAPI"]),
 	],
 	dependencies: [
-		.package(url: "https://github.com/stasel/WebRTC.git", from: "139.0.0"),
-		.package(url: "https://github.com/SwiftyLab/MetaCodable.git", from: "1.0.0"),
+		.package(url: "https://github.com/livekit/webrtc-xcframework.git", branch: "main"),
+		.package(url: "https://github.com/SwiftyLab/MetaCodable.git", .upToNextMajor(from: "1.0.0")),
 	],
 	targets: [
 		.target(name: "Core", dependencies: [
@@ -27,6 +26,6 @@ let package = Package(
 		.target(name: "WebSocketConnector", dependencies: ["Core"]),
 		.target(name: "UI", dependencies: ["Core", "WebRTCConnector"]),
 		.target(name: "RealtimeAPI", dependencies: ["Core", "WebRTCConnector", "UI"]),
-		.target(name: "WebRTCConnector", dependencies: ["Core", .product(name: "WebRTC", package: "WebRTC")]),
+		.target(name: "WebRTCConnector", dependencies: ["Core", .product(name: "LiveKitWebRTC", package: "webrtc-xcframework")]),
 	]
 )

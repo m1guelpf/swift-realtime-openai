@@ -274,9 +274,8 @@ import HelperCoders
 		}
 	}
 
-	/// Expiration timestamp for the session
-	@CodedBy(Since1970DateCoder())
-	public var expiresAt: Date
+	/// The type of session to create.
+	public let type: String = "realtime"
 
 	/// Unique identifier for the session
 	public var id: String?
@@ -318,13 +317,12 @@ import HelperCoders
 	/// Tools available to the model.
 	public var tools: [Tool]?
 
-	public init(expiresAt: Date, id: String? = nil, audio: Audio, instructions: String, maxResponseOutputTokens: MaxResponseOutputTokens? = nil, modalities: [Modality]? = nil, model: Model, prompt: Prompt? = nil, temperature: Double? = nil, toolChoice: Tool.Choice? = nil, tools: [Tool]? = nil) {
+	public init(id: String? = nil, audio: Audio, instructions: String, maxResponseOutputTokens: MaxResponseOutputTokens? = nil, modalities: [Modality]? = nil, model: Model, prompt: Prompt? = nil, temperature: Double? = nil, toolChoice: Tool.Choice? = nil, tools: [Tool]? = nil) {
 		self.id = id
 		self.tools = tools
 		self.model = model
 		self.audio = audio
 		self.prompt = prompt
-		self.expiresAt = expiresAt
 		self.toolChoice = toolChoice
 		self.modalities = modalities
 		self.temperature = temperature

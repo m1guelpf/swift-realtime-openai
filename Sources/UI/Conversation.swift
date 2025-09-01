@@ -1,7 +1,7 @@
 import Core
+import WebRTC
 import Foundation
 @preconcurrency import AVFoundation
-import WebRTCConnector
 
 public enum ConversationError: Error {
 	case sessionNotFound

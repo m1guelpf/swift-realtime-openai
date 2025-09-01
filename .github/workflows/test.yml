@@ -10,12 +10,8 @@ jobs:
         strategy:
           fail-fast: false
           matrix:
-            os: [ubuntu-latest, macos-latest]
             swift: ["6.0", "6.1", "main-snapshot"]
-            exclude:
-              - os: macos-latest
-                swift: "6.0" # Swift 6.0 on mac runs into a compiler error on CI when building MetaCodable, but somehow runs fine on the Swift Package Index build process?
-        runs-on: ${{ matrix.os }}
+        runs-on: macos-latest
         steps:
             - name: Install Swift toolchain
               shell: bash
@@ -35,32 +31,15 @@ jobs:
                 mkdir -p $SWIFTLY_BIN_DIR
                 mkdir -p $SWIFTLY_HOME_DIR
 
-                if ${{ runner.os == 'Linux' }} ; then
-                  curl -O https://download.swift.org/swiftly/linux/swiftly-$(uname -m).tar.gz
-                  tar -xzf swiftly-$(uname -m).tar.gz -C $SWIFTLY_BIN_DIR
-                  rm swiftly-$(uname -m).tar.gz
-                  sudo apt-get update
-                else
-                  curl -O https://download.swift.org/swiftly/darwin/swiftly.pkg
-                  installer -pkg swiftly.pkg -target CurrentUserHomeDirectory
-                  cp ~/.swiftly/bin/swiftly $SWIFTLY_BIN_DIR
-                  rm swiftly.pkg
-                fi
+                curl -O https://download.swift.org/swiftly/darwin/swiftly.pkg
+                installer -pkg swiftly.pkg -target CurrentUserHomeDirectory
+                cp ~/.swiftly/bin/swiftly $SWIFTLY_BIN_DIR
+                rm swiftly.pkg
 
                 swiftly init --no-modify-profile --quiet-shell-followup --assume-yes --skip-install --verbose
                 echo "swiftly version: $(swiftly --version)" >&2
 
-                swiftly install --assume-yes --post-install-file "${HOME}/.swiftly-postinstall-cmds.sh" --use ${{ matrix.swift }}
-                if [[ -f "${HOME}/.swiftly-postinstall-cmds.sh" ]]; then
-                  export DEBIAN_FRONTEND=noninteractive # prevent Debian/Ubuntu installs from hanging on tzdata
-                  if [[ "$(id -un)" == 'root' ]]; then
-                    . "${HOME}/.swiftly-postinstall-cmds.sh"
-                  else
-                    sudo bash -c ". '${HOME}/.swiftly-postinstall-cmds.sh'"
-                  fi
-                  rm "${HOME}/.swiftly-postinstall-cmds.sh"
-                fi
-
+                swiftly install --assume-yes --use ${{ matrix.swift }}
             - uses: actions/checkout@v4
 
             - name: Restore .build

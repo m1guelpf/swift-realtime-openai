@@ -20,10 +20,10 @@ public struct Response: Identifiable, Equatable, Hashable, Codable, Sendable {
 		public let outputAudioFormat: Session.AudioFormat
 
 		/// Tools (functions) available to the model.
-		public let tools: [Session.Tool]
+		public let tools: [Tool]
 
 		/// How the model chooses tools.
-		public let toolChoice: Session.ToolChoice
+		public let toolChoice: Tool.Choice
 
 		/// Sampling temperature.
 		public let temperature: Double
@@ -40,7 +40,7 @@ public struct Response: Identifiable, Equatable, Hashable, Codable, Sendable {
 		/// Input items to include in the prompt for the model. Creates a new context for this response, without including the default conversation. Can include references to items from the default conversation.
 		public let input: [Item]?
 
-		public init(modalities: [Session.Modality], instructions: String, voice: Session.Voice, outputAudioFormat: Session.AudioFormat, tools: [Session.Tool], toolChoice: Session.ToolChoice, temperature: Double, maxResponseOutputTokens: Int?, conversation: Conversation?, metadata: [String: String]?, input: [Item]?) {
+		public init(modalities: [Session.Modality], instructions: String, voice: Session.Voice, outputAudioFormat: Session.AudioFormat, tools: [Tool], toolChoice: Tool.Choice, temperature: Double, maxResponseOutputTokens: Int?, conversation: Conversation?, metadata: [String: String]?, input: [Item]?) {
 			self.modalities = modalities
 			self.instructions = instructions
 			self.voice = voice

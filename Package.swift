@@ -23,9 +23,9 @@ let package = Package(
 			.product(name: "MetaCodable", package: "MetaCodable"),
 			.product(name: "HelperCoders", package: "MetaCodable"),
 		]),
-		.target(name: "WebSocketConnector", dependencies: ["Core"]),
-		.target(name: "UI", dependencies: ["Core", "WebRTCConnector"]),
-		.target(name: "RealtimeAPI", dependencies: ["Core", "WebRTCConnector", "UI"]),
-		.target(name: "WebRTCConnector", dependencies: ["Core", .product(name: "LiveKitWebRTC", package: "webrtc-xcframework")]),
+		.target(name: "WebSocket", dependencies: ["Core"]),
+		.target(name: "UI", dependencies: ["Core", "WebRTC"]),
+		.target(name: "RealtimeAPI", dependencies: ["Core", "WebSocket", "WebRTC", "UI"]),
+		.target(name: "WebRTC", dependencies: ["Core", .product(name: "LiveKitWebRTC", package: "webrtc-xcframework")]),
 	]
 )

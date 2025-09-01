@@ -16,3 +16,12 @@ public enum Model: RawRepresentable, Equatable, Hashable, Codable, Sendable {
 		}
 	}
 }
+
+public extension Model {
+	enum Transcription: String, CaseIterable, Equatable, Hashable, Codable, Sendable {
+		case whisper = "whisper-1"
+		case gpt4o = "gpt-4o-transcribe-latest"
+		case gpt4oMini = "gpt-4o-mini-transcribe"
+		case gpt4oDiarize = "gpt-4o-transcribe-diarize"
+	}
+}

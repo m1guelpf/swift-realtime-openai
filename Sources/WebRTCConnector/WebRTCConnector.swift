@@ -1,6 +1,7 @@
 import Core
-@preconcurrency import WebRTC
+import AVFAudio
 import Foundation
+@preconcurrency import LiveKitWebRTC
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
@@ -23,16 +24,16 @@ public final class WebRTCConnector: NSObject, Connector, Sendable {
 		!audioTrack.isEnabled
 	}
 
-	private let audioTrack: RTCAudioTrack
-	private let dataChannel: RTCDataChannel
-	private let connection: RTCPeerConnection
+	private let audioTrack: LKRTCAudioTrack
+	private let dataChannel: LKRTCDataChannel
+	private let connection: LKRTCPeerConnection
 
 	private let stream: AsyncThrowingStream<ServerEvent, Error>.Continuation
 
-	private static let factory: RTCPeerConnectionFactory = {
-		RTCInitializeSSL()
+	private static let factory: LKRTCPeerConnectionFactory = {
+		LKRTCInitializeSSL()
 
-		return RTCPeerConnectionFactory()
+		return LKRTCPeerConnectionFactory()
 	}()
 
 	private let encoder: JSONEncoder = {
@@ -47,7 +48,7 @@ public final class WebRTCConnector: NSObject, Connector, Sendable {
 		return decoder
 	}()
 
-	private init(connection: RTCPeerConnection, audioTrack: RTCAudioTrack, dataChannel: RTCDataChannel) {
+	private init(connection: LKRTCPeerConnection, audioTrack: LKRTCAudioTrack, dataChannel: LKRTCDataChannel) {
 		self.connection = connection
 		self.audioTrack = audioTrack
 		self.dataChannel = dataChannel
@@ -65,6 +66,7 @@ public final class WebRTCConnector: NSObject, Connector, Sendable {
 
 	package func connect(using request: URLRequest) async throws {
 		guard connection.connectionState == .new else { return }
+
 		guard AVAudioApplication.shared.recordPermission == .granted else {
 			throw WebRTCError.missingAudioPermission
 		}
@@ -74,7 +76,7 @@ public final class WebRTCConnector: NSObject, Connector, Sendable {
 	}
 
 	public func send(event: ClientEvent) async throws {
-		try dataChannel.sendData(RTCDataBuffer(data: encoder.encode(event), isBinary: false))
+		try dataChannel.sendData(LKRTCDataBuffer(data: encoder.encode(event), isBinary: false))
 	}
 
 	public func disconnect() {
@@ -97,14 +99,14 @@ extension WebRTCConnector {
 
 	package static func create() throws -> WebRTCConnector {
 		guard let connection = factory.peerConnection(
-			with: RTCConfiguration(),
-			constraints: RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil),
+			with: LKRTCConfiguration(),
+			constraints: LKRTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil),
 			delegate: nil
 		) else { throw WebRTCError.failedToCreatePeerConnection }
 
 		let audioTrack = Self.setupLocalAudio(for: connection)
 
-		guard let dataChannel = connection.dataChannel(forLabel: "oai-events", configuration: RTCDataChannelConfiguration()) else {
+		guard let dataChannel = connection.dataChannel(forLabel: "oai-events", configuration: LKRTCDataChannelConfiguration()) else {
 			throw WebRTCError.failedToCreateDataChannel
 		}
 
@@ -113,8 +115,8 @@ extension WebRTCConnector {
 }
 
 private extension WebRTCConnector {
-	static func setupLocalAudio(for connection: RTCPeerConnection) -> RTCAudioTrack {
-		let audioSource = factory.audioSource(with: RTCMediaConstraints(
+	static func setupLocalAudio(for connection: LKRTCPeerConnection) -> LKRTCAudioTrack {
+		let audioSource = factory.audioSource(with: LKRTCMediaConstraints(
 			mandatoryConstraints: [
 				"googNoiseSuppression": "true", "googHighpassFilter": "true",
 				"googEchoCancellation": "true", "googAutoGainControl": "true",
@@ -128,18 +130,24 @@ private extension WebRTCConnector {
 	}
 
 	static func configureAudioSession() {
+		#if !os(macOS)
 		do {
 			let audioSession = AVAudioSession.sharedInstance()
+			#if os(tvOS)
+			try audioSession.setCategory(.playAndRecord, options: [])
+			#else
 			try audioSession.setCategory(.playAndRecord, options: [.defaultToSpeaker])
+			#endif
 			try audioSession.setMode(.videoChat)
 			try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 		} catch {
 			print("Failed to configure AVAudioSession: \(error)")
 		}
+		#endif
 	}
 
 	func performHandshake(using request: URLRequest) async throws {
-		let sdp = try await Result { try await connection.offer(for: RTCMediaConstraints(mandatoryConstraints: ["levelControl": "true"], optionalConstraints: nil)) }
+		let sdp = try await Result { try await connection.offer(for: LKRTCMediaConstraints(mandatoryConstraints: ["levelControl": "true"], optionalConstraints: nil)) }
 			.mapError(WebRTCError.failedToCreateSDPOffer)
 			.get()
 
@@ -148,7 +156,7 @@ private extension WebRTCConnector {
 
 		let remoteSdp = try await fetchRemoteSDP(using: request, localSdp: connection.localDescription!.sdp)
 
-		do { try await connection.setRemoteDescription(RTCSessionDescription(type: .answer, sdp: remoteSdp)) }
+		do { try await connection.setRemoteDescription(LKRTCSessionDescription(type: .answer, sdp: remoteSdp)) }
 		catch { throw WebRTCError.failedToSetRemoteDescription(error) }
 	}
 
@@ -166,27 +174,27 @@ private extension WebRTCConnector {
 	}
 }
 
-extension WebRTCConnector: RTCPeerConnectionDelegate {
-	public func peerConnectionShouldNegotiate(_: RTCPeerConnection) {}
-	public func peerConnection(_: RTCPeerConnection, didAdd _: RTCMediaStream) {}
-	public func peerConnection(_: RTCPeerConnection, didOpen _: RTCDataChannel) {}
-	public func peerConnection(_: RTCPeerConnection, didRemove _: RTCMediaStream) {}
-	public func peerConnection(_: RTCPeerConnection, didChange _: RTCSignalingState) {}
-	public func peerConnection(_: RTCPeerConnection, didGenerate _: RTCIceCandidate) {}
-	public func peerConnection(_: RTCPeerConnection, didRemove _: [RTCIceCandidate]) {}
-	public func peerConnection(_: RTCPeerConnection, didChange _: RTCIceGatheringState) {}
+extension WebRTCConnector: LKRTCPeerConnectionDelegate {
+	public func peerConnectionShouldNegotiate(_: LKRTCPeerConnection) {}
+	public func peerConnection(_: LKRTCPeerConnection, didAdd _: LKRTCMediaStream) {}
+	public func peerConnection(_: LKRTCPeerConnection, didOpen _: LKRTCDataChannel) {}
+	public func peerConnection(_: LKRTCPeerConnection, didRemove _: LKRTCMediaStream) {}
+	public func peerConnection(_: LKRTCPeerConnection, didChange _: LKRTCSignalingState) {}
+	public func peerConnection(_: LKRTCPeerConnection, didGenerate _: LKRTCIceCandidate) {}
+	public func peerConnection(_: LKRTCPeerConnection, didRemove _: [LKRTCIceCandidate]) {}
+	public func peerConnection(_: LKRTCPeerConnection, didChange _: LKRTCIceGatheringState) {}
 
-	public func peerConnection(_: RTCPeerConnection, didChange newState: RTCIceConnectionState) {
+	public func peerConnection(_: LKRTCPeerConnection, didChange newState: LKRTCIceConnectionState) {
 		print("ICE Connection State changed to: \(newState)")
 	}
 }
 
-extension WebRTCConnector: RTCDataChannelDelegate {
-	public func dataChannel(_: RTCDataChannel, didReceiveMessageWith buffer: RTCDataBuffer) {
+extension WebRTCConnector: LKRTCDataChannelDelegate {
+	public func dataChannel(_: LKRTCDataChannel, didReceiveMessageWith buffer: LKRTCDataBuffer) {
 		stream.yield(with: Result { try self.decoder.decode(ServerEvent.self, from: buffer.data) })
 	}
 
-	public func dataChannelDidChangeState(_ dataChannel: RTCDataChannel) {
+	public func dataChannelDidChangeState(_ dataChannel: LKRTCDataChannel) {
 		Task { @MainActor [state = dataChannel.readyState] in
 			switch state {
 				case .open: status = .connected

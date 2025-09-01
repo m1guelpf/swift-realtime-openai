@@ -18,7 +18,7 @@ public final class WebSocketConnector: NSObject, Connector, Sendable {
 		return encoder
 	}()
 
-	private init(connectingTo request: URLRequest) {
+	init(connectingTo request: URLRequest) {
 		let (events, stream) = AsyncThrowingStream.makeStream(of: ServerEvent.self)
 
 		let webSocket = URLSession.shared.webSocketTask(with: request)
@@ -81,7 +81,6 @@ public final class WebSocketConnector: NSObject, Connector, Sendable {
 		webSocket.cancel(with: .goingAway, reason: nil)
 		task.cancel()
 		stream.finish()
-		status = .disconnected
 	}
 }
 

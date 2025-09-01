@@ -159,7 +159,6 @@ private extension WebRTCConnector {
 
 		let (data, response) = try await URLSession.shared.data(for: request)
 		guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), let remoteSdp = String(data: data, encoding: .utf8) else {
-			print(String(data: data, encoding: .utf8))
 			throw WebRTCError.badServerResponse(response)
 		}
 
@@ -184,7 +183,6 @@ extension WebRTCConnector: RTCPeerConnectionDelegate {
 
 extension WebRTCConnector: RTCDataChannelDelegate {
 	public func dataChannel(_: RTCDataChannel, didReceiveMessageWith buffer: RTCDataBuffer) {
-		print(String(data: buffer.data, encoding: .utf8))
 		stream.yield(with: Result { try self.decoder.decode(ServerEvent.self, from: buffer.data) })
 	}
 

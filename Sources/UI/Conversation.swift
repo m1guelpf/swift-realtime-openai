@@ -1,5 +1,6 @@
 import Core
 import WebRTC
+import AVFAudio
 import Foundation
 
 public enum ConversationError: Error {
@@ -11,6 +12,7 @@ public enum ConversationError: Error {
 public final class Conversation: @unchecked Sendable {
 	public typealias SessionUpdateCallback = (inout Session) -> Void
 
+	public var debug: Bool
 	private let client: WebRTCConnector
 	private var task: Task<Void, Error>!
 	private let sessionUpdateCallback: SessionUpdateCallback?
@@ -45,7 +47,8 @@ public final class Conversation: @unchecked Sendable {
 		} }
 	}
 
-	public required init(configuring sessionUpdateCallback: SessionUpdateCallback? = nil) throws {
+	public required init(debug: Bool = false, configuring sessionUpdateCallback: SessionUpdateCallback? = nil) throws {
+		self.debug = debug
 		client = try WebRTCConnector.create()
 		self.sessionUpdateCallback = sessionUpdateCallback
 		(errors, errorStream) = AsyncStream.makeStream(of: ServerError.self)
@@ -67,6 +70,8 @@ public final class Conversation: @unchecked Sendable {
 	}
 
 	public func connect(using request: URLRequest) async throws {
+		await AVAudioApplication.requestRecordPermission()
+
 		try await client.connect(using: request)
 	}
 
@@ -145,6 +150,8 @@ public final class Conversation: @unchecked Sendable {
 /// Event handling private API
 private extension Conversation {
 	func handleEvent(_ event: ServerEvent) throws {
+		if debug { print(event) }
+
 		switch event {
 			case let .error(_, error):
 				errorStream.yield(error)
@@ -167,6 +174,10 @@ private extension Conversation {
 			case let .conversationItemInputAudioTranscriptionFailed(_, _, _, error):
 				errorStream.yield(error)
 				print("Received error: \(error)")
+			case let .responseCreated(_, response):
+				if id == nil {
+					id = response.conversationId
+				}
 			case let .responseContentPartAdded(_, _, itemId, _, contentIndex, part):
 				updateEvent(id: itemId) { message in
 					message.content.insert(.init(from: part), at: contentIndex)

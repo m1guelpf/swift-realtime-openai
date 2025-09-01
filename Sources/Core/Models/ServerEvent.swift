@@ -16,25 +16,6 @@ import MetaCodable
 		public let resetSeconds: Double
 	}
 
-	public struct AudioData: Equatable, Hashable, Codable, Sendable {
-		public var data: Data
-
-		public init(from decoder: Decoder) throws {
-			let container = try decoder.singleValueContainer()
-
-			guard let data = try Data(base64Encoded: container.decode(String.self)) else {
-				throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid base64 string")
-			}
-			self.data = data
-		}
-
-		public func encode(to encoder: Encoder) throws {
-			var container = encoder.singleValueContainer()
-
-			try container.encode(data.base64EncodedString())
-		}
-	}
-
 	public struct LogProb: Equatable, Hashable, Codable, Sendable {
 		public var bytes: [Int]
 		public var logprob: Double

@@ -7,13 +7,14 @@ public enum ConversationError: Error {
 	case converterInitializationFailed
 }
 
-@Observable @MainActor
+@MainActor @Observable
 public final class Conversation: @unchecked Sendable {
-	private let client: WebRTCConnector
-	private var isInterrupting: Bool = false
-	private let errorStream: AsyncStream<ServerError>.Continuation
+	public typealias SessionUpdateCallback = (inout Session) -> Void
 
+	private let client: WebRTCConnector
 	private var task: Task<Void, Error>!
+	private let sessionUpdateCallback: SessionUpdateCallback?
+	private let errorStream: AsyncStream<ServerError>.Continuation
 
 	/// A stream of errors that occur during the conversation.
 	public let errors: AsyncStream<ServerError>
@@ -31,15 +32,9 @@ public final class Conversation: @unchecked Sendable {
 		client.status
 	}
 
-	/// Whether the conversation is currently listening to the user's microphone.
-	public private(set) var isListening: Bool = false
-
 	/// Whether the user is currently speaking.
 	/// This only works when using the server's voice detection.
 	public private(set) var isUserSpeaking: Bool = false
-
-	/// Whether the model is currently speaking.
-	public private(set) var isPlaying: Bool = false
 
 	/// A list of messages in the conversation.
 	/// Note that this doesn't include function call events. To get a complete list, use `entries`.
@@ -50,8 +45,9 @@ public final class Conversation: @unchecked Sendable {
 		} }
 	}
 
-	public required init() throws {
+	public required init(configuring sessionUpdateCallback: SessionUpdateCallback? = nil) throws {
 		client = try WebRTCConnector.create()
+		self.sessionUpdateCallback = sessionUpdateCallback
 		(errors, errorStream) = AsyncStream.makeStream(of: ServerError.self)
 
 		task = Task.detached { [weak self] in
@@ -59,8 +55,8 @@ public final class Conversation: @unchecked Sendable {
 
 			do {
 				for try await event in self.client.events {
-					print("Got event")
-					await self.handleEvent(event)
+					do { try await self.handleEvent(event) }
+					catch { print("Unhandled error in event handler: \(error)") }
 
 					guard !Task.isCancelled else { break }
 				}
@@ -101,60 +97,61 @@ public final class Conversation: @unchecked Sendable {
 
 	/// Make changes to the current session
 	/// Note that this will fail if the session hasn't started yet. Use `whenConnected` to ensure the session is ready.
-	public func updateSession(withChanges callback: (inout Session) throws -> Void) async throws {
-		guard var session = session else { throw ConversationError.sessionNotFound }
+	public func updateSession(withChanges callback: (inout Session) throws -> Void) throws {
+		guard var session else { throw ConversationError.sessionNotFound }
 
 		try callback(&session)
 
-		try await setSession(session)
+		try setSession(session)
 	}
 
 	/// Set the configuration of the current session
-	public func setSession(_ session: Session) async throws {
+	public func setSession(_ session: Session) throws {
 		// update endpoint errors if we include the session id
 		var session = session
 		session.id = nil
 
-		try await client.send(event: .updateSession(session))
+		try client.send(event: .updateSession(session))
 	}
 
 	/// Send a client event to the server.
 	/// > Warning: This function is intended for advanced use cases. Use the other functions to send messages and audio data.
-	public func send(event: ClientEvent) async throws {
-		try await client.send(event: event)
+	public func send(event: ClientEvent) throws {
+		try client.send(event: event)
 	}
 
 	/// Manually append audio bytes to the conversation.
 	/// Commit the audio to trigger a model response when server turn detection is disabled.
 	/// > Note: The `Conversation` class can automatically handle listening to the user's mic and playing back model responses.
 	/// > To get started, call the `startListening` function.
-	public func send(audioDelta audio: Data, commit: Bool = false) async throws {
-		try await send(event: .appendInputAudioBuffer(encoding: audio))
-		if commit { try await send(event: .commitInputAudioBuffer()) }
+	public func send(audioDelta audio: Data, commit: Bool = false) throws {
+		try send(event: .appendInputAudioBuffer(encoding: audio))
+		if commit { try send(event: .commitInputAudioBuffer()) }
 	}
 
 	/// Send a text message and wait for a response.
 	/// Optionally, you can provide a response configuration to customize the model's behavior.
-	/// > Note: Calling this function will automatically call `interruptSpeech` if the model is currently speaking.
-	public func send(from role: Item.ItemRole, text: String, response: Response.Config? = nil) async throws {
-		try await send(event: .createConversationItem(.message(Item.Message(id: String(randomLength: 32), from: role, content: [.input_text(text)]))))
-		try await send(event: .createResponse(using: response))
+	public func send(from role: Item.Message.Role, text: String, response: Response.Config? = nil) throws {
+		try send(event: .createConversationItem(.message(Item.Message(id: String(randomLength: 32), role: role, content: [.input_text(text)]))))
+		try send(event: .createResponse(using: response))
 	}
 
 	/// Send the response of a function call.
-	public func send(result output: Item.FunctionCallOutput) async throws {
-		try await send(event: .createConversationItem(.functionCallOutput(output)))
+	public func send(result output: Item.FunctionCallOutput) throws {
+		try send(event: .createConversationItem(.functionCallOutput(output)))
 	}
 }
 
 /// Event handling private API
 private extension Conversation {
-	func handleEvent(_ event: ServerEvent) {
+	func handleEvent(_ event: ServerEvent) throws {
 		switch event {
 			case let .error(_, error):
 				errorStream.yield(error)
+				print("Received error: \(error)")
 			case let .sessionCreated(_, session):
 				self.session = session
+				if let sessionUpdateCallback { try updateSession(withChanges: sessionUpdateCallback) }
 			case let .sessionUpdated(_, session):
 				self.session = session
 			case let .conversationItemCreated(_, item, _):
@@ -169,6 +166,7 @@ private extension Conversation {
 				}
 			case let .conversationItemInputAudioTranscriptionFailed(_, _, _, error):
 				errorStream.yield(error)
+				print("Received error: \(error)")
 			case let .responseContentPartAdded(_, _, itemId, _, contentIndex, part):
 				updateEvent(id: itemId) { message in
 					message.content.insert(.init(from: part), at: contentIndex)

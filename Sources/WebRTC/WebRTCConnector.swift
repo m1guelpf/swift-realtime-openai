@@ -6,7 +6,7 @@ import Foundation
 import FoundationNetworking
 #endif
 
-public final class WebRTCConnector: NSObject, Connector, Sendable {
+@Observable public final class WebRTCConnector: NSObject, Connector, Sendable {
 	enum WebRTCError: Error {
 		case missingAudioPermission
 		case failedToCreateDataChannel
@@ -75,7 +75,7 @@ public final class WebRTCConnector: NSObject, Connector, Sendable {
 		Self.configureAudioSession()
 	}
 
-	public func send(event: ClientEvent) async throws {
+	public func send(event: ClientEvent) throws {
 		try dataChannel.sendData(LKRTCDataBuffer(data: encoder.encode(event), isBinary: false))
 	}
 

@@ -10,7 +10,7 @@ jobs:
         strategy:
           fail-fast: false
           matrix:
-            swift: ["6.0", "6.1", "main-snapshot"]
+            swift: ["6.1", "main-snapshot"]
         runs-on: macos-latest
         steps:
             - name: Install Swift toolchain

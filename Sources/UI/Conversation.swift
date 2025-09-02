@@ -5,6 +5,7 @@ import Foundation
 
 public enum ConversationError: Error {
 	case sessionNotFound
+	case invalidEphemeralKey
 	case converterInitializationFailed
 }
 
@@ -12,17 +13,26 @@ public enum ConversationError: Error {
 public final class Conversation: @unchecked Sendable {
 	public typealias SessionUpdateCallback = (inout Session) -> Void
 
-	public var debug: Bool
 	private let client: WebRTCConnector
 	private var task: Task<Void, Error>!
 	private let sessionUpdateCallback: SessionUpdateCallback?
 	private let errorStream: AsyncStream<ServerError>.Continuation
 
-	/// A stream of errors that occur during the conversation.
-	public let errors: AsyncStream<ServerError>
+	/// Whether to print debug information to the console.
+	public var debug: Bool
+
+	/// Whether to mute the user's microphone.
+	public var muted: Bool = false {
+		didSet {
+			client.audioTrack.isEnabled = !muted
+		}
+	}
 
 	/// The unique ID of the conversation.
 	public private(set) var id: String?
+
+	/// A stream of errors that occur during the conversation.
+	public let errors: AsyncStream<ServerError>
 
 	/// The current session for this conversation.
 	public private(set) var session: Session?
@@ -38,6 +48,9 @@ public final class Conversation: @unchecked Sendable {
 	/// This only works when using the server's voice detection.
 	public private(set) var isUserSpeaking: Bool = false
 
+	/// Whether the model is currently speaking.
+	public private(set) var isModelSpeaking: Bool = false
+
 	/// A list of messages in the conversation.
 	/// Note that this doesn't include function call events. To get a complete list, use `entries`.
 	public var messages: [Item.Message] {
@@ -47,9 +60,9 @@ public final class Conversation: @unchecked Sendable {
 		} }
 	}
 
-	public required init(debug: Bool = false, configuring sessionUpdateCallback: SessionUpdateCallback? = nil) throws {
+	public required init(debug: Bool = false, configuring sessionUpdateCallback: SessionUpdateCallback? = nil) {
 		self.debug = debug
-		client = try WebRTCConnector.create()
+		client = try! WebRTCConnector.create()
 		self.sessionUpdateCallback = sessionUpdateCallback
 		(errors, errorStream) = AsyncStream.makeStream(of: ServerError.self)
 
@@ -69,6 +82,11 @@ public final class Conversation: @unchecked Sendable {
 		}
 	}
 
+	deinit {
+		client.disconnect()
+		errorStream.finish()
+	}
+
 	public func connect(using request: URLRequest) async throws {
 		await AVAudioApplication.requestRecordPermission()
 
@@ -76,14 +94,11 @@ public final class Conversation: @unchecked Sendable {
 	}
 
 	public func connect(ephemeralKey: String, model: Model = .gptRealtime) async throws {
-		try await connect(using: .webRTCConnectionRequest(ephemeralKey: ephemeralKey, model: model))
-	}
-
-	deinit {
-		errorStream.finish()
-
-		Task { @MainActor [weak self] in
-			self?.task?.cancel()
+		do {
+			try await connect(using: .webRTCConnectionRequest(ephemeralKey: ephemeralKey, model: model))
+		} catch let error as WebRTCConnector.WebRTCError {
+			guard case .invalidEphemeralKey = error else { throw error }
+			throw ConversationError.invalidEphemeralKey
 		}
 	}
 
@@ -137,7 +152,7 @@ public final class Conversation: @unchecked Sendable {
 	/// Send a text message and wait for a response.
 	/// Optionally, you can provide a response configuration to customize the model's behavior.
 	public func send(from role: Item.Message.Role, text: String, response: Response.Config? = nil) throws {
-		try send(event: .createConversationItem(.message(Item.Message(id: String(randomLength: 32), role: role, content: [.input_text(text)]))))
+		try send(event: .createConversationItem(.message(Item.Message(id: String(randomLength: 32), role: role, content: [.inputText(text)]))))
 		try send(event: .createResponse(using: response))
 	}
 
@@ -167,9 +182,9 @@ private extension Conversation {
 				entries.removeAll { $0.id == itemId }
 			case let .conversationItemInputAudioTranscriptionCompleted(_, itemId, contentIndex, transcript, _, _):
 				updateEvent(id: itemId) { message in
-					guard case let .input_audio(audio) = message.content[contentIndex] else { return }
+					guard case let .inputAudio(audio) = message.content[contentIndex] else { return }
 
-					message.content[contentIndex] = .input_audio(.init(audio: audio.audio, transcript: transcript))
+					message.content[contentIndex] = .inputAudio(.init(audio: audio.audio, transcript: transcript))
 				}
 			case let .conversationItemInputAudioTranscriptionFailed(_, _, _, error):
 				errorStream.yield(error)
@@ -211,7 +226,7 @@ private extension Conversation {
 			case let .responseOutputAudioDelta(_, _, itemId, _, contentIndex, delta):
 				updateEvent(id: itemId) { message in
 					guard case let .audio(audio) = message.content[contentIndex] else { return }
-					message.content[contentIndex] = .audio(.init(audio: audio.audio.data + delta.data, transcript: audio.transcript))
+					message.content[contentIndex] = .audio(.init(audio: (audio.audio?.data ?? Data()) + delta.data, transcript: audio.transcript))
 				}
 			case let .responseFunctionCallArgumentsDelta(_, _, itemId, _, _, delta):
 				updateEvent(id: itemId) { functionCall in
@@ -225,6 +240,10 @@ private extension Conversation {
 				isUserSpeaking = true
 			case .inputAudioBufferSpeechStopped:
 				isUserSpeaking = false
+			case .outputAudioBufferStarted:
+				isModelSpeaking = true
+			case .outputAudioBufferStopped:
+				isModelSpeaking = false
 			case let .responseOutputItemDone(_, _, _, item):
 				updateEvent(id: item.id) { message in
 					guard case let .message(newMessage) = item else { return }

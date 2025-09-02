@@ -8,18 +8,18 @@ import MetaCodable
 
 	public struct Audio: Equatable, Hashable, Codable, Sendable {
 		/// Audio bytes
-		public var audio: AudioData
+		public var audio: AudioData?
 
 		/// The transcript of the audio
 		public var transcript: String?
 
-		public init(audio: AudioData, transcript: String? = nil) {
+		public init(audio: AudioData? = nil, transcript: String? = nil) {
 			self.audio = audio
 			self.transcript = transcript
 		}
 
-		public init(audio: Data = Data(), transcript: String? = nil) {
-			self.init(audio: AudioData(data: audio), transcript: transcript)
+		public init(audio: Data? = nil, transcript: String? = nil) {
+			self.init(audio: audio.map { AudioData(data: $0) }, transcript: transcript)
 		}
 	}
 
@@ -36,15 +36,15 @@ import MetaCodable
 		public enum Content: Equatable, Hashable, Sendable {
 			case text(String)
 			case audio(Audio)
-			case input_text(String)
-			case input_audio(Audio)
+			case inputText(String)
+			case inputAudio(Audio)
 
 			public var text: String? {
 				switch self {
 					case let .text(text): text
-					case let .input_text(text): text
+					case let .inputText(text): text
 					case let .audio(audio): audio.transcript
-					case let .input_audio(audio): audio.transcript
+					case let .inputAudio(audio): audio.transcript
 				}
 			}
 		}
@@ -439,11 +439,11 @@ extension Item.Message.Content: Codable {
 				self = try .text(container.decode(String.self, forKey: .text))
 			case "input_text":
 				let container = try decoder.container(keyedBy: Text.CodingKeys.self)
-				self = try .input_text(container.decode(String.self, forKey: .text))
-			case "audio":
+				self = try .inputText(container.decode(String.self, forKey: .text))
+			case "output_audio":
 				self = try .audio(Item.Audio(from: decoder))
 			case "input_audio":
-				self = try .input_audio(Item.Audio(from: decoder))
+				self = try .inputAudio(Item.Audio(from: decoder))
 			default:
 				throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown content type: \(type)")
 		}
@@ -456,14 +456,14 @@ extension Item.Message.Content: Codable {
 			case let .text(text):
 				try container.encode(text, forKey: .text)
 				try container.encode("text", forKey: .type)
-			case let .input_text(text):
+			case let .inputText(text):
 				try container.encode(text, forKey: .text)
 				try container.encode("input_text", forKey: .type)
 			case let .audio(audio):
-				try container.encode("audio", forKey: .type)
+				try container.encode("output_audio", forKey: .type)
 				try container.encode(audio.audio, forKey: .audio)
 				try container.encode(audio.transcript, forKey: .transcript)
-			case let .input_audio(audio):
+			case let .inputAudio(audio):
 				try container.encode(audio.audio, forKey: .audio)
 				try container.encode("input_audio", forKey: .type)
 				try container.encode(audio.transcript, forKey: .transcript)

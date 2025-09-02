@@ -7,7 +7,8 @@ import FoundationNetworking
 #endif
 
 @Observable public final class WebRTCConnector: NSObject, Connector, Sendable {
-	enum WebRTCError: Error {
+	public enum WebRTCError: Error {
+		case invalidEphemeralKey
 		case missingAudioPermission
 		case failedToCreateDataChannel
 		case failedToCreatePeerConnection
@@ -24,7 +25,7 @@ import FoundationNetworking
 		!audioTrack.isEnabled
 	}
 
-	private let audioTrack: LKRTCAudioTrack
+	package let audioTrack: LKRTCAudioTrack
 	private let dataChannel: LKRTCDataChannel
 	private let connection: LKRTCPeerConnection
 
@@ -82,7 +83,6 @@ import FoundationNetworking
 	public func disconnect() {
 		connection.close()
 		stream.finish()
-		Task { @MainActor in status = .disconnected }
 	}
 
 	public func toggleMute() {
@@ -166,7 +166,9 @@ private extension WebRTCConnector {
 		request.setValue("application/sdp", forHTTPHeaderField: "Content-Type")
 
 		let (data, response) = try await URLSession.shared.data(for: request)
-		guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), let remoteSdp = String(data: data, encoding: .utf8) else {
+
+		guard let response = response as? HTTPURLResponse, response.statusCode == 201, let remoteSdp = String(data: data, encoding: .utf8) else {
+			if (response as? HTTPURLResponse)?.statusCode == 401 { throw WebRTCError.invalidEphemeralKey }
 			throw WebRTCError.badServerResponse(response)
 		}
 
@@ -191,7 +193,11 @@ extension WebRTCConnector: LKRTCPeerConnectionDelegate {
 
 extension WebRTCConnector: LKRTCDataChannelDelegate {
 	public func dataChannel(_: LKRTCDataChannel, didReceiveMessageWith buffer: LKRTCDataBuffer) {
-		stream.yield(with: Result { try self.decoder.decode(ServerEvent.self, from: buffer.data) })
+		do { try stream.yield(decoder.decode(ServerEvent.self, from: buffer.data)) }
+		catch {
+			print("Failed to decode server event: \(String(data: buffer.data, encoding: .utf8) ?? "<invalid utf8>")")
+			stream.finish(throwing: error)
+		}
 	}
 
 	public func dataChannelDidChangeState(_ dataChannel: LKRTCDataChannel) {

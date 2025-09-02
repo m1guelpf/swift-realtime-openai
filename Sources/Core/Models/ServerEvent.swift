@@ -46,6 +46,14 @@ import MetaCodable
 	@CodedAs("conversation.item.created")
 	case conversationItemCreated(eventId: String, item: Item, previousItemId: String?)
 
+	/// Returned when a conversation item is added.
+	///
+	/// - Parameter eventId: The unique ID of the server event.
+	/// - Parameter item: A single item within a Realtime conversation.
+	/// - Parameter previousItemId: The ID of the item that precedes this one, if any.
+	@CodedAs("conversation.item.added")
+	case conversationItemAdded(eventId: String, item: Item, previousItemId: String?)
+
 	/// Returned when a conversation item is finalized.
 	/// - Parameter eventId: The unique ID of the server event.
 	/// - Parameter item: A single item within a Realtime conversation.
@@ -202,6 +210,20 @@ import MetaCodable
 	@CodedAs("input_audio_buffer.timeout_triggered")
 	case inputAudioBufferTimeoutTriggered(eventId: String, itemId: String, audioStartMs: Int, audioEndMs: Int)
 
+	/// Returned when the output audio buffer starts playing audio.
+	///
+	/// - Parameter eventId: The unique ID of the server event.
+	/// - Parameter responseId: The ID of the Response to which the output audio belongs.
+	@CodedAs("output_audio_buffer.started")
+	case outputAudioBufferStarted(eventId: String, responseId: String)
+
+	/// Returned when the output audio buffer stops playing audio.
+	///
+	/// - Parameter eventId: The unique ID of the server event.
+	/// - Parameter responseId: The ID of the Response to which the output audio belongs.
+	@CodedAs("output_audio_buffer.stopped")
+	case outputAudioBufferStopped(eventId: String, responseId: String)
+
 	/// Returned when a new Response is created.
 	///
 	/// The first event of response creation, where the response is in an initial state of `inProgress`.
@@ -318,7 +340,7 @@ import MetaCodable
 	/// - Parameter outputIndex: The index of the output item in the Response.
 	/// - Parameter contentIndex: The index of the content part in the item's content array.
 	/// - Parameter delta: The transcript delta.
-	@CodedAs("response.audio_transcript.delta")
+	@CodedAs("response.output_audio_transcript.delta")
 	case responseAudioTranscriptDelta(
 		eventId: String,
 		responseId: String,
@@ -336,7 +358,7 @@ import MetaCodable
 	/// - Parameter outputIndex: The index of the output item in the Response.
 	/// - Parameter contentIndex: The index of the content part in the item's content array.
 	/// - Parameter transcript: The final transcript of the audio.
-	@CodedAs("response.audio_transcript.done")
+	@CodedAs("response.output_audio_transcript.done")
 	case responseAudioTranscriptDone(
 		eventId: String,
 		responseId: String,
@@ -509,6 +531,7 @@ extension ServerEvent: Identifiable {
 			case let .error(id, _): id
 			case let .sessionCreated(id, _): id
 			case let .sessionUpdated(id, _): id
+			case let .conversationItemAdded(id, _, _): id
 			case let .conversationItemCreated(id, _, _): id
 			case let .conversationItemDone(id, _, _): id
 			case let .conversationItemRetrieved(id, _): id
@@ -523,6 +546,8 @@ extension ServerEvent: Identifiable {
 			case let .inputAudioBufferSpeechStarted(id, _, _): id
 			case let .inputAudioBufferSpeechStopped(id, _, _): id
 			case let .inputAudioBufferTimeoutTriggered(id, _, _, _): id
+			case let .outputAudioBufferStarted(id, _): id
+			case let .outputAudioBufferStopped(id, _): id
 			case let .responseCreated(id, _): id
 			case let .responseDone(id, _): id
 			case let .responseOutputItemAdded(id, _, _, _): id

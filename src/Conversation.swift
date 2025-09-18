@@ -308,6 +308,10 @@ public extension Conversation {
 private extension Conversation {
 	@MainActor func handleEvent(_ event: ServerEvent) {
 		switch event {
+      case let .responseDone(event):
+        if event.response.status == .failed {
+          errorStream.yield(ServerError(type: "serverFailed", code: nil, message: "Unknown failure", param: nil, eventId: event.eventId))
+        }
 			case let .error(event):
 				errorStream.yield(event.error)
 			case let .sessionCreated(event):

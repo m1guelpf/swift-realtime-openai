@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(swift --version)",
-      "Bash(swift build)"
+      "Bash(swift build)",
+      "WebFetch(domain:platform.openai.com)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs"
     ],
     "deny": [],
     "ask": []

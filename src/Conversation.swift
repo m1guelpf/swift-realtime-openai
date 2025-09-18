@@ -4,9 +4,86 @@ import Foundation
 import UIKit
 #endif
 
-public enum ConversationError: Error {
+public enum ConversationError: Error, LocalizedError {
 	case sessionNotFound
 	case converterInitializationFailed
+	case connectionLost(underlyingError: Error)
+	case reconnectionFailed(attempts: Int)
+	case timeout(operation: String, duration: TimeInterval)
+	case authenticationFailed
+	case sessionExpired
+	case audioProcessingError(Error)
+	case invalidResponse(String)
+	case networkUnavailable
+	case rateLimitExceeded(retryAfter: TimeInterval?)
+	case invalidConfiguration(String)
+	case streamingError(Error)
+
+	public var errorDescription: String? {
+		switch self {
+		case .sessionNotFound:
+			return "Session not found. Please ensure the session is properly initialized."
+		case .converterInitializationFailed:
+			return "Failed to initialize audio converter. Check audio format compatibility."
+		case .connectionLost(let error):
+			return "Connection lost: \(error.localizedDescription)"
+		case .reconnectionFailed(let attempts):
+			return "Failed to reconnect after \(attempts) attempts. Please check your network connection."
+		case .timeout(let operation, let duration):
+			return "Operation '\(operation)' timed out after \(duration) seconds"
+		case .authenticationFailed:
+			return "Authentication failed. Please check your API credentials."
+		case .sessionExpired:
+			return "Session has expired. Please create a new session."
+		case .audioProcessingError(let error):
+			return "Audio processing error: \(error.localizedDescription)"
+		case .invalidResponse(let message):
+			return "Invalid response from server: \(message)"
+		case .networkUnavailable:
+			return "Network connection is unavailable. Please check your internet connection."
+		case .rateLimitExceeded(let retryAfter):
+			if let retryAfter = retryAfter {
+				return "Rate limit exceeded. Please retry after \(retryAfter) seconds."
+			} else {
+				return "Rate limit exceeded. Please try again later."
+			}
+		case .invalidConfiguration(let message):
+			return "Invalid configuration: \(message)"
+		case .streamingError(let error):
+			return "Streaming error: \(error.localizedDescription)"
+		}
+	}
+
+	public var recoverySuggestion: String? {
+		switch self {
+		case .sessionNotFound:
+			return "Call startSession() to create a new session."
+		case .converterInitializationFailed:
+			return "Verify that your audio format parameters are supported."
+		case .connectionLost:
+			return "The connection will attempt to reconnect automatically."
+		case .reconnectionFailed:
+			return "Check your network settings and try connecting again."
+		case .timeout:
+			return "Check your network connection and retry the operation."
+		case .authenticationFailed:
+			return "Verify your API key is correct and has the necessary permissions."
+		case .sessionExpired:
+			return "Start a new session to continue."
+		case .audioProcessingError:
+			return "Check audio permissions and device configuration."
+		case .invalidResponse:
+			return "This may be a temporary issue. Please try again."
+		case .networkUnavailable:
+			return "Connect to a network and try again."
+		case .rateLimitExceeded:
+			return "Wait for the specified time before retrying."
+		case .invalidConfiguration:
+			return "Review your configuration settings."
+		case .streamingError:
+			return "Check your network stability and try again."
+		}
+	}
 }
 
 @Observable

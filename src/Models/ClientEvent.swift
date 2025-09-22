@@ -60,12 +60,8 @@ public enum ClientEvent: Equatable, Sendable {
 	public struct ConversationItemDeleteEvent: Encodable, Equatable, Sendable {
 		/// Optional client-generated ID used to identify this event.
 		public var eventId: String?
-		/// The ID of the assistant message item to truncate.
-		public var itemId: String?
-		/// The index of the content part to truncate.
-		public var contentIndex: Int
-		/// Inclusive duration up to which audio is truncated, in milliseconds.
-		public var audioEndMs: Int
+		/// The ID of the item to delete.
+		public var itemId: String
 
 		private let type = "conversation.item.delete"
 	}
@@ -131,8 +127,8 @@ public extension ClientEvent {
 		.truncateConversationItem(ConversationItemTruncateEvent(eventId: eventId, itemId: itemId, contentIndex: index, audioEndMs: audioMs))
 	}
 
-	static func deleteConversationItem(id eventId: String? = nil, for id: String? = nil, at index: Int, atAudio audioIndex: Int) -> Self {
-		.deleteConversationItem(ConversationItemDeleteEvent(eventId: eventId, itemId: id, contentIndex: index, audioEndMs: audioIndex))
+	static func deleteConversationItem(id eventId: String? = nil, itemId: String) -> Self {
+		.deleteConversationItem(ConversationItemDeleteEvent(eventId: eventId, itemId: itemId))
 	}
 
 	static func createResponse(id: String? = nil, _ response: Response.Config? = nil) -> Self {

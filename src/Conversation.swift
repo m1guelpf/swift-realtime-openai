@@ -128,6 +128,15 @@ public final class Conversation: @unchecked Sendable {
 	/// Whether the model is currently speaking.
 	@MainActor public private(set) var isPlaying: Bool = false
 
+	/// Current rate limits for the conversation.
+	@MainActor public private(set) var rateLimits: [String: ServerEvent.RateLimitsUpdatedEvent.RateLimit] = [:]
+
+	/// The ID of the currently active response, if any.
+	@MainActor public private(set) var activeResponseId: String?
+
+	/// Whether the audio output buffer has started.
+	@MainActor public private(set) var isOutputBufferActive: Bool = false
+
 	/// A list of messages in the conversation.
 	/// Note that this doesn't include function call events. To get a complete list, use `entries`.
 	@MainActor public var messages: [Item.Message] {
@@ -385,10 +394,6 @@ public extension Conversation {
 private extension Conversation {
 	@MainActor func handleEvent(_ event: ServerEvent) {
 		switch event {
-      case let .responseDone(event):
-        if event.response.status == .failed {
-          errorStream.yield(ServerError(type: "serverFailed", code: nil, message: "Unknown failure", param: nil, eventId: event.eventId))
-        }
 			case let .error(event):
 				errorStream.yield(event.error)
 			case let .sessionCreated(event):
@@ -398,8 +403,32 @@ private extension Conversation {
 				session = event.session
 			case let .conversationCreated(event):
 				id = event.conversation.id
+
+			// Input Audio Buffer Events
+			case .inputAudioBufferCommitted:
+				// Audio buffer has been committed - no specific state update needed
+				break
+			case .inputAudioBufferCleared:
+				// Audio buffer has been cleared - no specific state update needed
+				break
+			case .inputAudioBufferSpeechStarted:
+				isUserSpeaking = true
+				if handlingVoice { interruptSpeech() }
+			case .inputAudioBufferSpeechStopped:
+				isUserSpeaking = false
+
+			// Conversation Item Events
 			case let .conversationItemCreated(event):
 				entries.append(event.item)
+			case let .conversationItemTruncated(event):
+				updateEvent(id: event.itemId) { message in
+					// Truncate audio content at the specified index and duration
+					guard event.contentIndex < message.content.count,
+						  case let .audio(audio) = message.content[event.contentIndex] else { return }
+
+					// For now, we'll just mark it as truncated - actual audio truncation would require more complex processing
+					message.content[event.contentIndex] = .audio(.init(audio: audio.audio, transcript: audio.transcript))
+				}
 			case let .conversationItemDeleted(event):
 				entries.removeAll { $0.id == event.itemId }
 			case let .conversationItemInputAudioTranscriptionCompleted(event):
@@ -408,8 +437,41 @@ private extension Conversation {
 
 					message.content[event.contentIndex] = .input_audio(.init(audio: audio.audio, transcript: event.transcript))
 				}
+			case let .conversationItemInputAudioTranscriptionDelta(event):
+				updateEvent(id: event.itemId) { message in
+					guard case let .input_audio(audio) = message.content[event.contentIndex] else { return }
+
+					message.content[event.contentIndex] = .input_audio(.init(audio: audio.audio, transcript: (audio.transcript ?? "") + event.delta))
+				}
 			case let .conversationItemInputAudioTranscriptionFailed(event):
 				errorStream.yield(event.error)
+
+			// Output Audio Buffer Events
+			case .outputAudioBufferStarted:
+				isOutputBufferActive = true
+			case .outputAudioBufferStopped:
+				isOutputBufferActive = false
+
+			// Response Events
+			case let .responseCreated(event):
+				activeResponseId = event.response.id
+			case let .responseDone(event):
+				if event.response.id == activeResponseId {
+					activeResponseId = nil
+				}
+				if event.response.status == .failed {
+					errorStream.yield(ServerError(type: "serverFailed", code: nil, message: "Response failed", param: nil, eventId: event.eventId))
+				}
+			case .responseOutputItemAdded:
+				// An item was added to the response - already handled by conversationItemCreated
+				// This event just provides additional response context
+				break
+			case let .responseOutputItemDone(event):
+				updateEvent(id: event.item.id) { message in
+					guard case let .message(newMessage) = event.item else { return }
+
+					message = newMessage
+				}
 			case let .responseContentPartAdded(event):
 				updateEvent(id: event.itemId) { message in
 					message.content.insert(.init(from: event.part), at: event.contentIndex)
@@ -447,27 +509,26 @@ private extension Conversation {
 					if handlingVoice { queueAudioSample(event) }
 					message.content[event.contentIndex] = .audio(.init(audio: audio.audio + event.delta, transcript: audio.transcript))
 				}
+			case .responseAudioDone:
+				// Audio response completed - no specific state update needed
+				break
 			case let .responseFunctionCallArgumentsDelta(event):
 				updateEvent(id: event.itemId) { functionCall in
 					functionCall.arguments.append(event.delta)
 				}
 			case let .responseFunctionCallArgumentsDone(event):
-				updateEvent(id: event.itemId) { functionCall in
+        updateEvent(id: event.itemId) { functionCall in
+          print("AIFunc: Function call \(functionCall.callId) responseFunctionCallArgumentsDone, arguments = \(event.arguments)")
 					functionCall.arguments = event.arguments
+          functionCall.status = .completed
 				}
-			case .inputAudioBufferSpeechStarted:
-				isUserSpeaking = true
-				if handlingVoice { interruptSpeech() }
-			case .inputAudioBufferSpeechStopped:
-				isUserSpeaking = false
-			case let .responseOutputItemDone(event):
-				updateEvent(id: event.item.id) { message in
-					guard case let .message(newMessage) = event.item else { return }
 
-					message = newMessage
+			// Rate Limits
+			case let .rateLimitsUpdated(event):
+				// Update rate limits dictionary
+				for rateLimit in event.rateLimits {
+					rateLimits[rateLimit.name] = rateLimit
 				}
-			default:
-				return
 		}
 	}
 

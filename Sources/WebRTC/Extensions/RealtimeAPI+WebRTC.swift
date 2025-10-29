@@ -11,7 +11,7 @@ public extension RealtimeAPI {
 	}
 
 	/// Connect to the OpenAI WebRTC Realtime API with the given authentication token and model.
-	static func webRTC(ephemeralKey: String, model: Model = .gptRealtime) async throws -> RealtimeAPI {
-		return try await webRTC(connectingTo: .webRTCConnectionRequest(ephemeralKey: ephemeralKey, model: model))
+	static func webRTC(ephemeralKey: String) async throws -> RealtimeAPI {
+		return try await webRTC(connectingTo: .webRTCConnectionRequest(ephemeralKey: ephemeralKey))
 	}
 }

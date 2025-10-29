@@ -95,7 +95,7 @@ import HelperCoders
 			}
 
 			/// Configuration for turn detection
-			public struct TurnDetection: Codable, Equatable, Hashable, Sendable {
+			@Codable public struct TurnDetection: Equatable, Hashable, Sendable {
 				/// The type of turn detection.
 				public enum VAD: String, Codable, Equatable, Hashable, Sendable {
 					case server = "server_vad"
@@ -108,6 +108,7 @@ import HelperCoders
 				}
 
 				/// Whether or not to automatically generate a response when a VAD stop event occurs.
+                @Default(ifMissing: false)
 				public var createResponse: Bool
 
 				/// Used only for `semantic` mode. The eagerness of the model to respond.
@@ -262,20 +263,21 @@ import HelperCoders
 		public var input: Input
 
 		/// Configuration for output audio.
-		public var output: Output
+		public var output: Output?
 
 		/// Creates a new `Audio` configuration.
 		///
 		/// - Parameter input: Configuration for input audio.
-		/// - Parameter output: Configuration for output audio.
-		public init(input: Input, output: Output) {
+		/// - Parameter output: Configuration for output audio. Output is nil when this is a transcription session
+		public init(input: Input, output: Output?) {
 			self.input = input
 			self.output = output
 		}
 	}
 
 	/// The type of session to create.
-	public let type: String = "realtime"
+    /// Valid values are "realtime" or "transcription"
+	public let type: String
 
 	/// Unique identifier for the session
 	public var id: String?
@@ -289,8 +291,8 @@ import HelperCoders
 	///
 	/// The model can be instructed on response content and format, (e.g. "be extremely succinct", "act friendly", "here are examples of good responses") and on audio behavior (e.g. "talk quickly", "inject emotion into your voice", "laugh frequently").
 	///
-	/// The instructions are not guaranteed to be followed by the model, but they provide guidance to the model on the desired behavior.
-	public var instructions: String
+	/// The instructions are not guaranteed to be followed by the model, but they provide guidance to the model on the desired behavior. Instructions are nil in the event of a Transcription session
+	public var instructions: String?
 
 	/// Maximum number of output tokens for a single assistant response, inclusive of tool calls.
 	///
@@ -301,7 +303,7 @@ import HelperCoders
 	public var modalities: [Modality]?
 
 	/// The Realtime model used for this session.
-	public var model: Model
+	public var model: Model?
 
 	/// Reference to a prompt template and its variables.
 	public var prompt: Prompt?
@@ -317,8 +319,9 @@ import HelperCoders
 	/// Tools available to the model.
 	public var tools: [Tool]?
 
-	public init(id: String? = nil, audio: Audio, instructions: String, maxResponseOutputTokens: MaxResponseOutputTokens? = nil, modalities: [Modality]? = nil, model: Model, prompt: Prompt? = nil, temperature: Double? = nil, toolChoice: Tool.Choice? = nil, tools: [Tool]? = nil) {
+    public init(id: String? = nil, type: String, audio: Audio, instructions: String, maxResponseOutputTokens: MaxResponseOutputTokens? = nil, modalities: [Modality]? = nil, model: Model, prompt: Prompt? = nil, temperature: Double? = nil, toolChoice: Tool.Choice? = nil, tools: [Tool]? = nil) {
 		self.id = id
+        self.type = type
 		self.tools = tools
 		self.model = model
 		self.audio = audio

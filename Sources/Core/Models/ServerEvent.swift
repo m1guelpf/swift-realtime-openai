@@ -22,6 +22,11 @@ import MetaCodable
 		public var token: String
 	}
 
+    public struct Usage: Equatable, Hashable, Codable, Sendable {
+        let type: String
+        let seconds: Int
+    }
+
 	/// Returned when an error occurs.
 	/// - Parameter eventId: The unique ID of the server event.
 	/// - Parameter error: Details of the error.
@@ -90,7 +95,7 @@ import MetaCodable
 		contentIndex: Int,
 		transcript: String,
 		logprobs: [LogProb]?,
-		usage: Response.Usage
+		usage: Usage
 	)
 
 	/// Returned when the text value of an input audio transcription content part is updated.
@@ -107,6 +112,7 @@ import MetaCodable
 		itemId: String,
 		contentIndex: Int,
 		delta: String,
+        obfuscation: String,
 		logprobs: [LogProb]?
 	)
 
@@ -536,7 +542,7 @@ extension ServerEvent: Identifiable {
 			case let .conversationItemDone(id, _, _): id
 			case let .conversationItemRetrieved(id, _): id
 			case let .conversationItemInputAudioTranscriptionCompleted(id, _, _, _, _, _): id
-			case let .conversationItemInputAudioTranscriptionDelta(id, _, _, _, _): id
+			case let .conversationItemInputAudioTranscriptionDelta(id, _, _, _, _, _): id
 			case let .conversationItemInputAudioTranscriptionSegment(id, _, _, _, _, _, _, _): id
 			case let .conversationItemInputAudioTranscriptionFailed(id, _, _, _): id
 			case let .conversationItemTruncated(id, _, _, _): id

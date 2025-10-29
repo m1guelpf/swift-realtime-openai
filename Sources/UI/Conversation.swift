@@ -93,9 +93,9 @@ public final class Conversation: @unchecked Sendable {
 		try await client.connect(using: request)
 	}
 
-	public func connect(ephemeralKey: String, model: Model = .gptRealtime) async throws {
+	public func connect(ephemeralKey: String) async throws {
 		do {
-			try await connect(using: .webRTCConnectionRequest(ephemeralKey: ephemeralKey, model: model))
+			try await connect(using: .webRTCConnectionRequest(ephemeralKey: ephemeralKey))
 		} catch let error as WebRTCConnector.WebRTCError {
 			guard case .invalidEphemeralKey = error else { throw error }
 			throw ConversationError.invalidEphemeralKey
@@ -176,10 +176,32 @@ private extension Conversation {
 				if let sessionUpdateCallback { try updateSession(withChanges: sessionUpdateCallback) }
 			case let .sessionUpdated(_, session):
 				self.session = session
-			case let .conversationItemCreated(_, item, _):
+            case let .conversationItemAdded(_, item, nil):
+                entries.append(item)
+            case let .conversationItemAdded(_, item, previousItemId?):
+                if let entryIndex = entries.firstIndex(where: { $0.id == previousItemId }) {
+                    entries.insert(item, at: entryIndex + 1)
+                } else {
+                    entries.append(item)
+                }
+			case let .conversationItemCreated(_, item, nil):
 				entries.append(item)
+            case let .conversationItemCreated(_, item, previousItemId?):
+                if let entryIndex = entries.firstIndex(where: { $0.id == previousItemId }) {
+                    entries.insert(item, at: entryIndex + 1)
+                } else {
+                    entries.append(item)
+                }
 			case let .conversationItemDeleted(_, itemId):
 				entries.removeAll { $0.id == itemId }
+            case let .conversationItemInputAudioTranscriptionDelta(_, itemId, contentIndex, delta, _, _):
+                updateEvent(id: itemId) { message in
+                    guard case let .inputAudio(audio) = message.content[contentIndex] else { return }
+
+                    message.content[contentIndex] = .inputAudio(
+                        .init(audio: audio.audio, transcript: audio.transcript ?? "" + delta)
+                    )
+                }
 			case let .conversationItemInputAudioTranscriptionCompleted(_, itemId, contentIndex, transcript, _, _):
 				updateEvent(id: itemId) { message in
 					guard case let .inputAudio(audio) = message.content[contentIndex] else { return }

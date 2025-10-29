@@ -196,6 +196,7 @@ extension WebRTCConnector: LKRTCDataChannelDelegate {
 		do { try stream.yield(decoder.decode(ServerEvent.self, from: buffer.data)) }
 		catch {
 			print("Failed to decode server event: \(String(data: buffer.data, encoding: .utf8) ?? "<invalid utf8>")")
+            print("Error: \(error)")
 			stream.finish(throwing: error)
 		}
 	}

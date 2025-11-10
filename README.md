@@ -40,7 +40,7 @@ import RealtimeAPI
 
 struct ContentView: View {
 	@State private var newMessage: String = ""
-	@State private var conversation = try! Conversation()
+	@State private var conversation = Conversation()
 
 	var messages: [Item.Message] {
 		conversation.entries.compactMap { switch $0 {
@@ -84,7 +84,7 @@ struct ContentView: View {
 		}
 		.navigationTitle("Chat")
 		.navigationBarTitleDisplayMode(.inline)
-		.task { try! await conversation..connect(ephemeralKey: YOUR_EPHEMERAL_KEY_HERE) }
+		.task { try! await conversation.connect(ephemeralKey: YOUR_EPHEMERAL_KEY_HERE) }
 	}
 
 	func sendMessage() {
@@ -105,11 +105,11 @@ import SwiftUI
 import RealtimeAPI
 
 struct ContentView: View {
-	@State private var conversation = try! Conversation()
+	@State private var conversation = Conversation()
 
 	var body: some View {
 		Text("Say something!")
-			.task { try! await conversation..connect(ephemeralKey: YOUR_EPHEMERAL_KEY_HERE) }
+			.task { try! await conversation.connect(ephemeralKey: YOUR_EPHEMERAL_KEY_HERE) }
 	}
 }
 ```

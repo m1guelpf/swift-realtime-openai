@@ -2,6 +2,7 @@ import Core
 import WebRTC
 import AVFAudio
 import Foundation
+import Observation
 
 public enum ConversationError: Error {
 	case sessionNotFound
@@ -13,7 +14,7 @@ public enum ConversationError: Error {
 public final class Conversation: @unchecked Sendable {
 	public typealias SessionUpdateCallback = (inout Session) -> Void
 
-	private let client: WebRTCConnector
+    private let client: WebRTCConnector
 	private var task: Task<Void, Error>!
 	private let sessionUpdateCallback: SessionUpdateCallback?
 	private let errorStream: AsyncStream<ServerError>.Continuation
@@ -152,11 +153,25 @@ public final class Conversation: @unchecked Sendable {
 	/// Send a text message and wait for a response.
 	/// Optionally, you can provide a response configuration to customize the model's behavior.
 	public func send(from role: Item.Message.Role, text: String, response: Response.Config? = nil) throws {
-		try send(event: .createConversationItem(.message(Item.Message(id: String(randomLength: 32), role: role, content: [.inputText(text)]))))
+		let id = UUID().uuidString.replacingOccurrences(of: "-", with: "") // random 32 character string
+		try send(event: .createConversationItem(.message(Item.Message(id: id, role: role, content: [.inputText(text)]))))
 		try send(event: .createResponse(using: response))
 	}
 
-	/// Send the response of a function call.
+	/// Send an image + text message and wait for a response.
+    public func send(from role: Item.Message.Role, image: Data, response: Response.Config? = nil) throws {
+        let dataURI = "data:image/jpeg;base64,\(image.base64EncodedString())"
+        let id = UUID().uuidString.replacingOccurrences(of: "-", with: "") // random 32 character string
+        let message = Item.Message(
+            id: id,
+            role: role,
+            content: [.inputImage(dataURI)]
+        )
+        try send(event: .createConversationItem(.message(message)))
+        try send(event: .createResponse(using: response))
+    }
+
+    /// Send the response of a function call.
 	public func send(result output: Item.FunctionCallOutput) throws {
 		try send(event: .createConversationItem(.functionCallOutput(output)))
 	}
@@ -176,10 +191,15 @@ private extension Conversation {
 				if let sessionUpdateCallback { try updateSession(withChanges: sessionUpdateCallback) }
 			case let .sessionUpdated(_, session):
 				self.session = session
-			case let .conversationItemCreated(_, item, _):
+			case let .conversationItemCreated(_, item, _),
+				let .conversationItemAdded(_, item, _):
 				entries.append(item)
 			case let .conversationItemDeleted(_, itemId):
 				entries.removeAll { $0.id == itemId }
+			case let .conversationItemDone(_, item, _):
+				if let i = entries.firstIndex(where: { $0.id == item.id }) {
+					entries[i] = item
+				}
 			case let .conversationItemInputAudioTranscriptionCompleted(_, itemId, contentIndex, transcript, _, _):
 				updateEvent(id: itemId) { message in
 					guard case let .inputAudio(audio) = message.content[contentIndex] else { return }

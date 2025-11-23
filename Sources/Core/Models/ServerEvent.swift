@@ -224,6 +224,11 @@ import MetaCodable
 	@CodedAs("output_audio_buffer.stopped")
 	case outputAudioBufferStopped(eventId: String, responseId: String)
 
+     /// Fired when the assistant’s output audio buffer is fully cleared.
+    /// No audio remains queued; the buffer is reset and ready for new output.
+	@CodedAs("output_audio_buffer.cleared")
+	case outputAudioBufferCleared(eventId: String, responseId: String)
+
 	/// Returned when a new Response is created.
 	///
 	/// The first event of response creation, where the response is in an initial state of `inProgress`.
@@ -548,6 +553,7 @@ extension ServerEvent: Identifiable {
 			case let .inputAudioBufferTimeoutTriggered(id, _, _, _): id
 			case let .outputAudioBufferStarted(id, _): id
 			case let .outputAudioBufferStopped(id, _): id
+            case let .outputAudioBufferCleared(id, _): id
 			case let .responseCreated(id, _): id
 			case let .responseDone(id, _): id
 			case let .responseOutputItemAdded(id, _, _, _): id

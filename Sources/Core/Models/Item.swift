@@ -37,12 +37,14 @@ import MetaCodable
 			case text(String)
 			case audio(Audio)
 			case inputText(String)
+			case inputImage(String)
 			case inputAudio(Audio)
 
 			public var text: String? {
 				switch self {
 					case let .text(text): text
 					case let .inputText(text): text
+					case let .inputImage(image): image
 					case let .audio(audio): audio.transcript
 					case let .inputAudio(audio): audio.transcript
 				}
@@ -419,6 +421,7 @@ extension Item.Message.Content: Codable {
 		case text
 		case audio
 		case transcript
+        case image_url
 	}
 
 	private struct Text: Codable {
@@ -440,7 +443,10 @@ extension Item.Message.Content: Codable {
 			case "input_text":
 				let container = try decoder.container(keyedBy: Text.CodingKeys.self)
 				self = try .inputText(container.decode(String.self, forKey: .text))
-			case "output_audio":
+            case "input_image":
+                let inner = try decoder.container(keyedBy: CodingKeys.self)
+                self = try .inputImage(inner.decodeIfPresent(String.self, forKey: .image_url) ?? "")
+            case "output_audio":
 				self = try .audio(Item.Audio(from: decoder))
 			case "input_audio":
 				self = try .inputAudio(Item.Audio(from: decoder))
@@ -459,7 +465,10 @@ extension Item.Message.Content: Codable {
 			case let .inputText(text):
 				try container.encode(text, forKey: .text)
 				try container.encode("input_text", forKey: .type)
-			case let .audio(audio):
+            case let .inputImage(imageURL):
+                try container.encode(imageURL, forKey: .image_url)
+                try container.encode("input_image", forKey: .type)
+            case let .audio(audio):
 				try container.encode("output_audio", forKey: .type)
 				try container.encode(audio.audio, forKey: .audio)
 				try container.encode(audio.transcript, forKey: .transcript)
